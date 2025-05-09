@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Helmet } from "react-helmet";
+import { WalletConnect, WalletDetails, TransferTokens } from "@/components/wallet";
+import { useWeb3 } from "@/hooks/use-web3";
 
 // Dummy wallet balances - in a real app, this would come from the API
 const walletBalances = [
@@ -93,92 +95,7 @@ export default function Transfer() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Transfer Form */}
             <div className="lg:col-span-2">
-              <Card className="bg-[#181830] border-[#2D2A66] mb-6 p-6">
-                <h2 className="text-lg mb-4">Token Transfer</h2>
-                
-                <div className="space-y-5">
-                  {/* Token Selection */}
-                  <div>
-                    <label className="text-sm text-gray-400 mb-1 block">Select Token</label>
-                    <Select value={selectedToken} onValueChange={setSelectedToken}>
-                      <SelectTrigger className="w-full bg-[#0F0F1A] border-[#2D2A66]">
-                        <SelectValue placeholder="Select token" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0F0F1A] border-[#2D2A66]">
-                        {walletBalances.map((token) => (
-                          <SelectItem key={token.id} value={token.symbol}>
-                            {token.symbol} - {token.balance} ({token.name})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Amount */}
-                  <div>
-                    <label className="text-sm text-gray-400 mb-1 block">Amount</label>
-                    <div className="relative">
-                      <Input 
-                        type="number" 
-                        placeholder="0.00" 
-                        className="bg-[#0F0F1A] border-[#2D2A66] pr-16"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                      />
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                        {selectedToken}
-                      </div>
-                    </div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      Value: ${getTokenUsdValue(selectedToken, parseFloat(amount) || 0)}
-                    </div>
-                  </div>
-                  
-                  {/* Recipient Address */}
-                  <div>
-                    <label className="text-sm text-gray-400 mb-1 block">Recipient Address</label>
-                    <Input 
-                      type="text" 
-                      placeholder="Enter wallet address" 
-                      className="bg-[#0F0F1A] border-[#2D2A66]"
-                      value={recipientAddress}
-                      onChange={(e) => setRecipientAddress(e.target.value)}
-                    />
-                  </div>
-                  
-                  {/* Memo (Optional) */}
-                  <div>
-                    <label className="text-sm text-gray-400 mb-1 block">Memo (Optional)</label>
-                    <Input 
-                      type="text" 
-                      placeholder="Add a note to this transfer" 
-                      className="bg-[#0F0F1A] border-[#2D2A66]"
-                      value={memo}
-                      onChange={(e) => setMemo(e.target.value)}
-                    />
-                  </div>
-                  
-                  {/* Network Fee */}
-                  <div className="bg-[#0F0F1A] border border-[#2D2A66] rounded-md p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Network Fee</span>
-                      <span>0.001 {selectedToken}</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-gray-400">Total Amount</span>
-                      <span>{(parseFloat(amount) + 0.001).toFixed(3)} {selectedToken}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Submit Button */}
-                  <Button 
-                    className="w-full bg-[#6366F1] hover:bg-[#5355D8] text-white"
-                    onClick={handleTransfer}
-                  >
-                    <Send className="mr-2 h-4 w-4" /> Transfer Token
-                  </Button>
-                </div>
-              </Card>
+              <TransferTokens />
               
               {/* Security Alert */}
               <Alert className="bg-[#181830] border-[#FF4351] mb-6">
@@ -192,35 +109,8 @@ export default function Transfer() {
             
             {/* Side Information */}
             <div className="space-y-6">
-              {/* My Wallet */}
-              <Card className="bg-[#181830] border-[#2D2A66] p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg">My Wallet</h3>
-                  <Button variant="outline" size="sm" className="h-8 bg-transparent border-[#2D2A66] text-white hover:bg-[#2D2A66]">View All</Button>
-                </div>
-                
-                <div className="space-y-3">
-                  {walletBalances.map((crypto) => (
-                    <div key={crypto.id} className="flex items-center justify-between p-3 bg-[#0F0F1A] rounded-lg">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-[#2D2A66] flex items-center justify-center mr-3">
-                          <span className="text-xs font-medium">{crypto.symbol}</span>
-                        </div>
-                        <div>
-                          <div className="font-medium">{crypto.name}</div>
-                          <div className="text-xs text-gray-400">{crypto.symbol}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-mono">{crypto.balance} {crypto.symbol}</div>
-                        <div className="text-xs text-gray-400">
-                          ${(crypto.balance * (cryptocurrencies?.find((c: any) => c.symbol === crypto.symbol)?.price || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+              {/* Wallet Details Component */}
+              <WalletDetails />
               
               {/* Recent Transfers */}
               <Card className="bg-[#181830] border-[#2D2A66] p-6">

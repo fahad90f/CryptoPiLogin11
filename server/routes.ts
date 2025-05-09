@@ -396,7 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "New password is required" });
       }
       
-      const user = await storage.resetPassword(userId, newPassword);
+      const user = await adminStorage.resetPassword(userId, newPassword);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -414,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = parseInt(req.params.id);
       const { reason, duration } = req.body;
       
-      const user = await storage.suspendUser(userId, reason, duration);
+      const user = await adminStorage.suspendUser(userId, reason, duration);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -433,7 +433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       
-      const user = await storage.unsuspendUser(userId);
+      const user = await adminStorage.unsuspendUser(userId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -452,7 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       
-      const success = await storage.deleteUser(userId);
+      const success = await adminStorage.deleteUser(userId);
       
       if (!success) {
         return res.status(404).json({ message: "User not found" });

@@ -15,6 +15,7 @@ import Register from "@/pages/auth/register";
 import AdminDashboard from "@/pages/admin";
 import Profile from "@/pages/profile";
 import { AuthProvider } from "@/context/AuthContext";
+import { Web3ContextProvider } from "@/context/Web3Context";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
@@ -106,10 +107,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <Web3ContextProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </Web3ContextProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
