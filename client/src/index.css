@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 227 95% 8%;
+  --foreground: 0 0% 100%;
+  --muted: 225 30% 20%;
+  --muted-foreground: 215 20% 65%;
+  --popover: 222 47% 8%;
+  --popover-foreground: 0 0% 100%;
+  --card: 222 47% 8%;
+  --card-foreground: 0 0% 100%;
+  --border: 225 30% 25%;
+  --input: 225 30% 25%;
+  --primary: 262 100% 63%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 225 30% 25%;
+  --secondary-foreground: 0 0% 100%;
+  --accent: 162 100% 48%;
+  --accent-foreground: 227 95% 8%;
+  --destructive: 352 100% 63%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 262 100% 63%;
+  --radius: 0.5rem;
+  
+  /* Chart colors */
+  --chart-1: 262 100% 63%;
+  --chart-2: 162 100% 48%;
+  --chart-3: 352 100% 63%;
+  --chart-4: 48 96% 53%;
+  --chart-5: 215 20% 65%;
+  
+  /* Sidebar colors */
+  --sidebar-background: 222 47% 8%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 262 100% 63%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 162 100% 48%;
+  --sidebar-accent-foreground: 227 95% 8%;
+  --sidebar-border: 225 30% 25%;
+  --sidebar-ring: 262 100% 63%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans bg-background text-foreground;
+  }
+  
+  .glow {
+    box-shadow: 0 0 15px rgba(0, 245, 212, 0.5);
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(222 47% 8%);
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(225 30% 25%);
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(262 100% 63%);
+  }
+  
+  .crypto-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(110, 68, 255, 0.2);
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes chartLine {
+    0% { transform: scaleX(0); transform-origin: left; }
+    100% { transform: scaleX(1); transform-origin: left; }
+  }
+  
+  .chart-line {
+    animation: chartLine 2s ease-out forwards;
+  }
+}
