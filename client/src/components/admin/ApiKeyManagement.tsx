@@ -100,16 +100,16 @@ export function ApiKeyManagement() {
   };
 
   // Fetch API keys
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery<ApiKey[]>({
     queryKey: ['/api/admin/api-keys'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/api-keys');
-      return response;
+      return response as ApiKey[];
     }
   });
 
   // Create API key mutation
-  const createApiKeyMutation = useMutation({
+  const createApiKeyMutation = useMutation<{key: string}>({
     mutationFn: async () => {
       const expiresIn = formState.expiresAt === "never" 
         ? null 
@@ -119,7 +119,7 @@ export function ApiKeyManagement() {
         name: formState.name,
         type: formState.type,
         expiresInDays: expiresIn
-      });
+      }) as Promise<{key: string}>;
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/api-keys'] });
@@ -297,7 +297,7 @@ export function ApiKeyManagement() {
                     </TableCell>
                     <TableCell>
                       {apiKey.isActive ? (
-                        <Badge variant="success">Active</Badge>
+                        <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
                       ) : (
                         <Badge variant="secondary">Inactive</Badge>
                       )}

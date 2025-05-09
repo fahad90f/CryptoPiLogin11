@@ -228,7 +228,7 @@ export function DashboardMetrics() {
                   nameKey="type"
                   label={({ type }) => formatTransactionType(type)}
                 >
-                  {data.transactionsByType.map((entry, index) => (
+                  {data.transactionsByType.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={getRandomColor(index)} />
                   ))}
                 </Pie>
@@ -253,7 +253,7 @@ export function DashboardMetrics() {
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="date" />
-                <YAxis formatter={(value) => `$${formatCompactNumber(value)}`} />
+                <YAxis formatter={(value: number) => `$${formatCompactNumber(value)}`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar
                   dataKey="amount"
