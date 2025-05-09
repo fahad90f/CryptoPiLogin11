@@ -27,9 +27,9 @@ interface SidebarNavItemProps {
 const SidebarNavItem = ({ href, icon, label, active }: SidebarNavItemProps) => {
   return (
     <Link href={href}>
-      <a
+      <div
         className={cn(
-          "flex items-center space-x-3 px-4 py-3 mb-1 rounded-lg transition-colors",
+          "flex items-center space-x-3 px-4 py-3 mb-1 rounded-lg transition-colors cursor-pointer",
           active
             ? "bg-primary/20 border border-primary/50"
             : "hover:bg-muted/30"
@@ -39,7 +39,7 @@ const SidebarNavItem = ({ href, icon, label, active }: SidebarNavItemProps) => {
           {icon}
         </span>
         <span>{label}</span>
-      </a>
+      </div>
     </Link>
   );
 };

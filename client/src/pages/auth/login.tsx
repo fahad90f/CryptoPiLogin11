@@ -87,9 +87,9 @@ export default function Login() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
                     <Link href="/forgot-password">
-                      <a className="text-sm text-primary hover:underline">
+                      <span className="text-sm text-primary hover:underline cursor-pointer">
                         Forgot password?
-                      </a>
+                      </span>
                     </Link>
                   </div>
                   <Input
@@ -142,9 +142,9 @@ export default function Login() {
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
                 <Link href="/register">
-                  <a className="text-primary hover:underline">
+                  <span className="text-primary hover:underline cursor-pointer">
                     Register
-                  </a>
+                  </span>
                 </Link>
               </p>
             </CardFooter>

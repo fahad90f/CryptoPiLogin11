@@ -163,9 +163,9 @@ export default function Register() {
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link href="/login">
-                  <a className="text-primary hover:underline">
+                  <span className="text-primary hover:underline cursor-pointer">
                     Login
-                  </a>
+                  </span>
                 </Link>
               </p>
             </CardFooter>

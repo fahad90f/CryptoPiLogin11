@@ -1,0 +1,23 @@
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of <a>.
+    at a
+    at a
+    at https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=07ef7836:337:18
+    at SidebarNavItem (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/src/components/ui/sidebar.tsx:32:27)
+    at nav
+    at div
+    at div
+    at Sidebar (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/src/components/ui/sidebar.tsx:70:27)
+    at div
+    at MainLayout (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/src/components/layouts/MainLayout.tsx:30:30)
+    at Dashboard (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/src/pages/dashboard.tsx:125:21)
+    at ProtectedRoute (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/src/App.tsx?v=cyZc77kMBm5CiRvwE6_xE:36:38)
+    at Route (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=07ef7836:323:16)
+    at Switch (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=07ef7836:379:17)
+    at Router
+    at Provider (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-5AJU3CG7.js?v=07ef7836:38:15)
+    at TooltipProvider (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=07ef7836:61:5)
+    at AuthProvider (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/src/context/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=07ef7836:2805:3)
+    at App
+    at V (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/next-themes.js?v=07ef7836:44:25)
+    at J (https://4d0d4dca-5d1b-40bb-a6d3-ea30daaf024b-00-2m0jfan5flqas.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/next-themes.js?v=07ef7836:42:18)
