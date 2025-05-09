@@ -7,11 +7,14 @@ import {
   Bell,
   Menu,
   Plus,
-  X
+  X,
+  Wallet
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { WalletConnect } from "@/components/wallet/WalletConnect";
+import { Separator } from "@/components/ui/separator";
 
 interface MainLayoutProps {
   children: React.ReactNode;
