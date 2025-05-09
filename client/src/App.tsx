@@ -12,6 +12,7 @@ import Transfer from "@/pages/transfer";
 import Settings from "@/pages/settings";
 import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
+import ForgotPassword from "@/pages/auth/forgot-password";
 import AdminDashboard from "@/pages/admin";
 import Profile from "@/pages/profile";
 import Wallet from "@/pages/wallet";
@@ -73,6 +74,7 @@ function Router() {
       {/* Auth routes */}
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/forgot-password" component={ForgotPassword} />
       
       {/* Protected user routes */}
       <Route path="/dashboard">
