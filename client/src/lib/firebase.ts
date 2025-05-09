@@ -13,15 +13,15 @@ import {
   User 
 } from "firebase/auth";
 
-// Firebase configuration
+// Firebase configuration using environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyBhsUCmK0SBvcMMM7KecVijvewAJ1U9XmI",
-  authDomain: "test-51d9b.firebaseapp.com",
-  projectId: "test-51d9b",
-  storageBucket: "test-51d9b.firebasestorage.app",
-  messagingSenderId: "52846244687",
-  appId: "1:52846244687:web:41af58e0867697164dcb3a",
-  measurementId: "G-R3XD3HFNGS"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ''
 };
 
 // Initialize Firebase
