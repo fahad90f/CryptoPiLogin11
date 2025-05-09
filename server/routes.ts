@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer } from "ws";
 import { storage, adminStorage } from "./storage";
 import { 
   insertUserSchema, 
@@ -13,6 +14,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { verifyIdToken } from "./firebase-admin";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up express session with memory store
@@ -940,6 +942,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Firebase authentication routes
+  app.post("/api/auth/firebase-sync", async (req, res) => {
+    try {
+      const { idToken, displayName, email, photoURL } = req.body;
+      
+      if (!idToken) {
+        return res.status(400).json({ message: "ID token is required" });
+      }
+      
+      try {
+        // Verify the ID token
+        const decodedToken = await verifyIdToken(idToken);
+        const uid = decodedToken.uid;
+        
+        // Check if user exists in our database
+        const existingUserByEmail = email ? await storage.getUserByUsername(email) : null;
+        
+        if (existingUserByEmail) {
+          // User exists, update with Firebase info if needed
+          const updatedUser = await storage.updateUser(existingUserByEmail.id, {
+            displayName: displayName || existingUserByEmail.displayName,
+            profilePicture: photoURL || existingUserByEmail.profilePicture,
+            updatedAt: new Date()
+          });
+          
+          // Login the user
+          req.login(updatedUser, (err) => {
+            if (err) {
+              console.error("Login error after Firebase sync:", err);
+              return res.status(500).json({ message: "Login failed after Firebase sync" });
+            }
+            
+            // Return user without password
+            const { password, ...userWithoutPassword } = updatedUser;
+            return res.json(userWithoutPassword);
+          });
+        } else {
+          // User doesn't exist, create a new one
+          const newUser = await storage.createUser({
+            username: email || `user_${uid.substring(0, 8)}`,
+            password: uid, // Use Firebase UID as password (it's secure since we won't use it for login)
+            email: email || null,
+            displayName: displayName || "Firebase User",
+            profilePicture: photoURL || null,
+            role: "user"
+          });
+          
+          // Login the user
+          req.login(newUser, (err) => {
+            if (err) {
+              console.error("Login error after Firebase user creation:", err);
+              return res.status(500).json({ message: "Login failed after Firebase user creation" });
+            }
+            
+            // Return user without password
+            const { password, ...userWithoutPassword } = newUser;
+            return res.status(201).json(userWithoutPassword);
+          });
+        }
+      } catch (verifyError) {
+        console.error("Firebase ID token verification failed:", verifyError);
+        return res.status(401).json({ message: "Invalid Firebase token" });
+      }
+    } catch (error) {
+      console.error("Firebase sync error:", error);
+      return res.status(500).json({ message: "Failed to sync with Firebase" });
+    }
+  });
+  
+  // Create HTTP server
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    
+    // Send a welcome message
+    ws.send(JSON.stringify({
+      type: 'connection',
+      message: 'Connected to CryptoPilot WebSocket server',
+      timestamp: new Date().toISOString()
+    }));
+    
+    // Handle incoming messages
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        console.log('Received message:', data);
+        
+        // Handle different message types
+        switch (data.type) {
+          case 'subscribe':
+            // Handle subscription requests (e.g., to crypto price updates)
+            ws.send(JSON.stringify({
+              type: 'subscription_confirmed',
+              channel: data.channel,
+              timestamp: new Date().toISOString()
+            }));
+            break;
+            
+          default:
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Unknown message type',
+              timestamp: new Date().toISOString()
+            }));
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: 'Error processing message',
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    
+    // Handle disconnection
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+    });
+  });
+  
   return httpServer;
 }
