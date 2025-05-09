@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, adminStorage } from "./storage";
 import { 
   insertUserSchema, 
   insertWalletSchema, 
@@ -552,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/auth-logs", requireAdmin, async (req, res) => {
     try {
       const logData = req.body;
-      const log = await storage.createAuthLog(logData);
+      const log = await adminStorage.createAuthLog(logData);
       
       res.status(201).json(log);
     } catch (error) {
@@ -678,7 +678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { key } = req.params;
       const { value, description } = req.body;
       
-      const config = await storage.updateSystemConfig(key, value, description);
+      const config = await adminStorage.updateSystemConfig(key, value, description);
       
       res.json(config);
     } catch (error) {
@@ -695,7 +695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Key is required" });
       }
       
-      const config = await storage.updateSystemConfig(key, value, description);
+      const config = await adminStorage.updateSystemConfig(key, value, description);
       
       res.status(201).json(config);
     } catch (error) {
