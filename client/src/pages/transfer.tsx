@@ -1,13 +1,13 @@
-import { MainLayout } from "@/components/layouts/MainLayout";
-import { TransferTokenForm } from "@/components/transfer/TransferTokenForm";
 import { Card, CardContent } from "@/components/ui/card";
-import { Send, ShieldAlert, History, Wallet } from "lucide-react";
+import { Send, ShieldAlert, History, Wallet, ChevronsRight } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Helmet } from "react-helmet";
 
 // Dummy wallet balances - in a real app, this would come from the API
@@ -22,6 +22,12 @@ const walletBalances = [
 export default function Transfer() {
   const [location, navigate] = useLocation();
   
+  // Form state
+  const [selectedToken, setSelectedToken] = useState("USDT");
+  const [amount, setAmount] = useState("100");
+  const [recipientAddress, setRecipientAddress] = useState("");
+  const [memo, setMemo] = useState("");
+  
   // Fetch cryptocurrency data
   const { data: cryptocurrencies, isLoading } = useQuery({ 
     queryKey: ['/api/cryptocurrencies'],
@@ -35,14 +41,26 @@ export default function Transfer() {
     { id: 3, amount: "10 SOL", recipient: "5Hw7...j9oe", time: "3 days ago", status: "Completed" }
   ];
   
-  // Combine cryptocurrency data with balance information
-  const cryptosWithBalance = walletBalances.map(balance => {
-    const crypto = cryptocurrencies?.find((c: any) => c.symbol === balance.symbol);
-    return {
-      ...balance,
-      price: crypto?.price || 0
-    };
-  });
+  // Calculate token value in USD
+  const getTokenUsdValue = (symbol: string, amount: number) => {
+    const crypto = cryptocurrencies?.find((c: any) => c.symbol === symbol);
+    return crypto ? (crypto.price * amount).toFixed(2) : "0.00";
+  };
+  
+  // Handle transfer
+  const handleTransfer = () => {
+    if (!selectedToken || !amount || !recipientAddress) {
+      // Show validation error
+      return;
+    }
+    
+    console.log("Transferring token", {
+      token: selectedToken,
+      amount,
+      recipient: recipientAddress,
+      memo
+    });
+  };
 
   return (
     <>
@@ -50,89 +68,177 @@ export default function Transfer() {
         <title>Transfer Tokens | CryptoPilot</title>
         <meta name="description" content="Transfer cryptocurrency tokens securely to any compatible wallet. Send tokens across multiple blockchain networks with real-time tracking." />
       </Helmet>
-      <MainLayout title="Transfer" subtitle="Send tokens to other wallets securely and efficiently">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            {isLoading ? (
-              <Card className="border border-muted/30">
-                <CardContent className="p-5 space-y-4">
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 w-1/3" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-24 w-full" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <TransferTokenForm cryptoList={cryptosWithBalance} />
-            )}
+      
+      <div className="min-h-screen bg-[#070714] text-white">
+        {/* Header Navigation */}
+        <header className="border-b border-gray-800 flex items-center justify-between p-4">
+          <div className="text-[#6366F1] font-bold text-2xl">CryptoPilot</div>
+          <nav className="hidden md:flex items-center space-x-6">
+            <a href="/dashboard" className="text-gray-400 hover:text-white">Dashboard</a>
+            <a href="/generate" className="text-gray-400 hover:text-white">Generate</a>
+            <a href="/convert" className="text-gray-400 hover:text-white">Convert</a>
+            <a href="/transfer" className="text-white font-medium">Transfer</a>
+            <a href="/settings" className="text-gray-400 hover:text-white">Settings</a>
+          </nav>
+          <div className="flex items-center space-x-2">
+            <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
+              <span className="font-medium text-sm">J</span>
+            </div>
           </div>
+        </header>
+        
+        <main className="p-6">
+          <h1 className="text-2xl font-bold mb-6">Transfer Token</h1>
           
-          <div className="space-y-6">
-            <Card className="border border-muted/30">
-              <CardContent className="p-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Transfer Form */}
+            <div className="lg:col-span-2">
+              <Card className="bg-[#181830] border-[#2D2A66] mb-6 p-6">
+                <h2 className="text-lg mb-4">Token Transfer</h2>
+                
+                <div className="space-y-5">
+                  {/* Token Selection */}
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Select Token</label>
+                    <Select value={selectedToken} onValueChange={setSelectedToken}>
+                      <SelectTrigger className="w-full bg-[#0F0F1A] border-[#2D2A66]">
+                        <SelectValue placeholder="Select token" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0F0F1A] border-[#2D2A66]">
+                        {walletBalances.map((token) => (
+                          <SelectItem key={token.id} value={token.symbol}>
+                            {token.symbol} - {token.balance} ({token.name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Amount */}
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Amount</label>
+                    <div className="relative">
+                      <Input 
+                        type="number" 
+                        placeholder="0.00" 
+                        className="bg-[#0F0F1A] border-[#2D2A66] pr-16"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        {selectedToken}
+                      </div>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      Value: ${getTokenUsdValue(selectedToken, parseFloat(amount) || 0)}
+                    </div>
+                  </div>
+                  
+                  {/* Recipient Address */}
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Recipient Address</label>
+                    <Input 
+                      type="text" 
+                      placeholder="Enter wallet address" 
+                      className="bg-[#0F0F1A] border-[#2D2A66]"
+                      value={recipientAddress}
+                      onChange={(e) => setRecipientAddress(e.target.value)}
+                    />
+                  </div>
+                  
+                  {/* Memo (Optional) */}
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Memo (Optional)</label>
+                    <Input 
+                      type="text" 
+                      placeholder="Add a note to this transfer" 
+                      className="bg-[#0F0F1A] border-[#2D2A66]"
+                      value={memo}
+                      onChange={(e) => setMemo(e.target.value)}
+                    />
+                  </div>
+                  
+                  {/* Network Fee */}
+                  <div className="bg-[#0F0F1A] border border-[#2D2A66] rounded-md p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Network Fee</span>
+                      <span>0.001 {selectedToken}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-gray-400">Total Amount</span>
+                      <span>{(parseFloat(amount) + 0.001).toFixed(3)} {selectedToken}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Submit Button */}
+                  <Button 
+                    className="w-full bg-[#6366F1] hover:bg-[#5355D8] text-white"
+                    onClick={handleTransfer}
+                  >
+                    <Send className="mr-2 h-4 w-4" /> Transfer Token
+                  </Button>
+                </div>
+              </Card>
+              
+              {/* Security Alert */}
+              <Alert className="bg-[#181830] border-[#FF4351] mb-6">
+                <ShieldAlert className="h-4 w-4 text-[#FF4351]" />
+                <AlertTitle>Important Security Notice</AlertTitle>
+                <AlertDescription className="text-gray-400">
+                  Always double-check recipient addresses. Blockchain transactions cannot be reversed once confirmed.
+                </AlertDescription>
+              </Alert>
+            </div>
+            
+            {/* Side Information */}
+            <div className="space-y-6">
+              {/* My Wallet */}
+              <Card className="bg-[#181830] border-[#2D2A66] p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-space font-semibold">My Wallet</h3>
-                  <Button variant="outline" size="sm" className="h-8">View All</Button>
+                  <h3 className="text-lg">My Wallet</h3>
+                  <Button variant="outline" size="sm" className="h-8 bg-transparent border-[#2D2A66] text-white hover:bg-[#2D2A66]">View All</Button>
                 </div>
                 
                 <div className="space-y-3">
                   {walletBalances.map((crypto) => (
-                    <div key={crypto.id} className="flex items-center justify-between p-3 bg-muted/10 rounded-lg">
+                    <div key={crypto.id} className="flex items-center justify-between p-3 bg-[#0F0F1A] rounded-lg">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mr-3">
+                        <div className="w-8 h-8 rounded-full bg-[#2D2A66] flex items-center justify-center mr-3">
                           <span className="text-xs font-medium">{crypto.symbol}</span>
                         </div>
                         <div>
                           <div className="font-medium">{crypto.name}</div>
-                          <div className="text-xs text-muted-foreground">{crypto.symbol}</div>
+                          <div className="text-xs text-gray-400">{crypto.symbol}</div>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="font-mono">{crypto.balance} {crypto.symbol}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-gray-400">
                           ${(crypto.balance * (cryptocurrencies?.find((c: any) => c.symbol === crypto.symbol)?.price || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
-              <ShieldAlert className="h-4 w-4" />
-              <AlertTitle>Transfer Security</AlertTitle>
-              <AlertDescription>
-                Always double-check recipient addresses. Blockchain transactions cannot be reversed once confirmed.
-              </AlertDescription>
-            </Alert>
-            
-            <Card className="border border-muted/30">
-              <CardContent className="p-5">
+              </Card>
+              
+              {/* Recent Transfers */}
+              <Card className="bg-[#181830] border-[#2D2A66] p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-space font-semibold">Recent Transfers</h3>
-                  <Button variant="ghost" size="sm" className="h-8 text-primary">View All</Button>
+                  <h3 className="text-lg">Recent Transfers</h3>
+                  <Button variant="ghost" size="sm" className="h-8 text-[#6366F1] hover:bg-[#2D2A66]">View All</Button>
                 </div>
                 
                 <div className="space-y-2">
                   {recentTransfers.map((transfer) => (
-                    <div key={transfer.id} className="flex items-center justify-between p-3 bg-muted/10 rounded-lg">
+                    <div key={transfer.id} className="flex items-center justify-between p-3 bg-[#0F0F1A] rounded-lg">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center mr-3">
-                          <Send className="h-4 w-4 text-destructive" />
+                        <div className="w-8 h-8 rounded-full bg-[#FF4351]/20 flex items-center justify-center mr-3">
+                          <Send className="h-4 w-4 text-[#FF4351]" />
                         </div>
                         <div>
                           <div className="font-medium">{transfer.amount}</div>
-                          <div className="text-xs text-muted-foreground">{transfer.time}</div>
+                          <div className="text-xs text-gray-400">{transfer.time}</div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -142,71 +248,62 @@ export default function Transfer() {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="border border-muted/30">
-              <CardContent className="p-5">
-                <h3 className="text-lg font-space font-semibold mb-4">Network Fees</h3>
+              </Card>
+              
+              {/* Network Fees */}
+              <Card className="bg-[#181830] border-[#2D2A66] p-6">
+                <h3 className="text-lg mb-4">Network Fees</h3>
                 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-2">
                     <div className="flex items-center">
-                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                      <div className="w-6 h-6 rounded-full bg-[#2D2A66] flex items-center justify-center mr-2">
                         <span className="text-xs">ETH</span>
                       </div>
                       <span>Ethereum</span>
                     </div>
                     <div className="text-right text-sm">
                       <div>~0.003 ETH</div>
-                      <div className="text-xs text-muted-foreground">($5.60)</div>
+                      <div className="text-xs text-gray-400">($5.60)</div>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between p-2">
                     <div className="flex items-center">
-                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                      <div className="w-6 h-6 rounded-full bg-[#2D2A66] flex items-center justify-center mr-2">
                         <span className="text-xs">BSC</span>
                       </div>
                       <span>Binance Smart Chain</span>
                     </div>
                     <div className="text-right text-sm">
                       <div>~0.0005 BNB</div>
-                      <div className="text-xs text-muted-foreground">($0.18)</div>
+                      <div className="text-xs text-gray-400">($0.18)</div>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between p-2">
                     <div className="flex items-center">
-                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mr-2">
-                        <span className="text-xs">TRX</span>
-                      </div>
-                      <span>Tron</span>
-                    </div>
-                    <div className="text-right text-sm">
-                      <div>~5 TRX</div>
-                      <div className="text-xs text-muted-foreground">($0.05)</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center">
-                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                      <div className="w-6 h-6 rounded-full bg-[#2D2A66] flex items-center justify-center mr-2">
                         <span className="text-xs">SOL</span>
                       </div>
                       <span>Solana</span>
                     </div>
                     <div className="text-right text-sm">
                       <div>~0.00001 SOL</div>
-                      <div className="text-xs text-muted-foreground">($0.001)</div>
+                      <div className="text-xs text-gray-400">($0.001)</div>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </Card>
+            </div>
           </div>
-        </div>
-      </MainLayout>
+          
+          {/* Footer */}
+          <div className="text-center text-sm text-gray-500 mt-8">
+            © 2025 CryptoPilot. All rights reserved.
+          </div>
+        </main>
+      </div>
     </>
   );
 }
