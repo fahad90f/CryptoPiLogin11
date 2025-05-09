@@ -52,7 +52,7 @@ const transferFormSchema = z.object({
 type TransferFormValues = z.infer<typeof transferFormSchema>;
 
 export function TransferTokens() {
-  const { active, account, library, balance } = useWeb3();
+  const { connected, account, provider, signer, balance } = useWeb3();
   const { toast } = useToast();
   const [isTransferring, setIsTransferring] = useState(false);
 
@@ -66,7 +66,7 @@ export function TransferTokens() {
   });
 
   const handleTransfer = async (values: TransferFormValues) => {
-    if (!active || !account || !library) {
+    if (!connected || !account || !provider || !signer) {
       toast({
         title: "Wallet not connected",
         description: "Please connect your wallet to transfer tokens.",
@@ -82,7 +82,7 @@ export function TransferTokens() {
       const amountInWei = ethers.parseEther(values.amount);
       
       // Check if the user has enough balance
-      const walletBalance = await library.getBalance(account);
+      const walletBalance = await provider.getBalance(account);
       if (BigInt(walletBalance) < BigInt(amountInWei)) {
         toast({
           title: "Insufficient balance",
@@ -100,7 +100,7 @@ export function TransferTokens() {
       };
       
       // Send the transaction
-      const signer = await library.getSigner();
+      // In ethers v6, the signer object directly has the sendTransaction method
       const transaction = await signer.sendTransaction(tx);
       
       toast({
@@ -131,7 +131,7 @@ export function TransferTokens() {
   };
 
   // Show connection prompt if not connected
-  if (!active || !account) {
+  if (!connected || !account) {
     return (
       <Card>
         <CardHeader>

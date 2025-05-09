@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useWeb3 } from "@/hooks/use-web3";
-import { WalletType } from "@/context/Web3Context";
+import { WalletType } from "@/hooks/use-eth-wallet";
 import { truncateAddress } from "@/lib/utils";
 import { Wallet, Coins, LogOut, ChevronDown, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 export function WalletConnect() {
-  const { account, active, connectWallet, disconnectWallet, walletType, balance, chainId, isConnecting } = useWeb3();
+  const { account, connected, connectWallet, disconnectWallet, walletType, balance, chainId, connecting } = useWeb3();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleConnect = async (type: WalletType) => {
@@ -60,7 +60,7 @@ export function WalletConnect() {
   };
 
   // If connected, show wallet info and disconnect button
-  if (active && account) {
+  if (connected && account) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -109,10 +109,10 @@ export function WalletConnect() {
         variant="outline"
         className="flex items-center gap-2"
         onClick={() => setIsDialogOpen(true)}
-        disabled={isConnecting}
+        disabled={connecting}
       >
         <Wallet className="h-4 w-4" />
-        <span>{isConnecting ? "Connecting..." : "Connect Wallet"}</span>
+        <span>{connecting ? "Connecting..." : "Connect Wallet"}</span>
       </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

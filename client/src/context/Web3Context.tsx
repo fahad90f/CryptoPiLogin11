@@ -1,9 +1,36 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { BrowserProvider, JsonRpcProvider } from 'ethers';
+import { BrowserProvider, JsonRpcProvider, JsonRpcSigner } from 'ethers';
 import { Web3ReactProvider, useWeb3React } from '@web3-react/core';
 import { InjectedConnector } from '@web3-react/injected-connector';
 import { ethers } from 'ethers';
 import { useToast } from '@/hooks/use-toast';
+
+// Create a compatibility layer for web3-react with ethers v6
+class Web3CompatProvider {
+  _provider: any;
+  _browserProvider: BrowserProvider;
+  
+  constructor(provider: any) {
+    this._provider = provider;
+    this._browserProvider = new BrowserProvider(provider);
+  }
+  
+  get provider() {
+    return this._provider;
+  }
+  
+  async getSigner(): Promise<JsonRpcSigner> {
+    return this._browserProvider.getSigner();
+  }
+  
+  async getBalance(address: string) {
+    return this._browserProvider.getBalance(address);
+  }
+  
+  async lookupAddress(address: string) {
+    return this._browserProvider.lookupAddress(address);
+  }
+}
 
 // Define supported chain IDs (Ethereum Mainnet, BSC, Polygon, Arbitrum, Optimism)
 const supportedChainIds = [1, 56, 137, 42161, 10];
@@ -24,7 +51,7 @@ type Web3ContextType = {
   account: string | null;
   chainId: number | undefined;
   active: boolean;
-  library: BrowserProvider | undefined;
+  library: Web3CompatProvider | undefined;
   connectWallet: (walletType: WalletType) => Promise<void>;
   disconnectWallet: () => void;
   walletType: WalletType;
@@ -54,9 +81,8 @@ function detectWalletType(): WalletType {
   return WalletType.Unknown;
 }
 
-function getLibrary(provider: any): BrowserProvider {
-  const library = new BrowserProvider(provider);
-  return library;
+function getLibrary(provider: any): Web3CompatProvider {
+  return new Web3CompatProvider(provider);
 }
 
 export function Web3ContextProvider({ children }: { children: React.ReactNode }) {
@@ -68,7 +94,7 @@ export function Web3ContextProvider({ children }: { children: React.ReactNode })
 }
 
 function Web3ProviderInternal({ children }: { children: React.ReactNode }) {
-  const { active, account, library, chainId, activate, deactivate } = useWeb3React<BrowserProvider>();
+  const { active, account, library, chainId, activate, deactivate } = useWeb3React<Web3CompatProvider>();
   const [walletType, setWalletType] = useState<WalletType>(WalletType.Unknown);
   const [balance, setBalance] = useState<string>('0');
   const [ensName, setEnsName] = useState<string | null>(null);

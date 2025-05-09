@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { WalletConnect } from "./WalletConnect";
 
 export function WalletDetails() {
-  const { active, account, balance, chainId, walletType } = useWeb3();
+  const { connected, account, balance, chainId, walletType } = useWeb3();
   const [copied, setCopied] = useState(false);
   
   const copyToClipboard = (text: string) => {
@@ -41,7 +41,7 @@ export function WalletDetails() {
   };
 
   // If not connected, show a prompt to connect
-  if (!active || !account) {
+  if (!connected || !account) {
     return (
       <Card className="w-full">
         <CardHeader>
