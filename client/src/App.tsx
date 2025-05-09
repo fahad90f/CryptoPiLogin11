@@ -14,6 +14,7 @@ import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import AdminDashboard from "@/pages/admin";
 import Profile from "@/pages/profile";
+import Wallet from "@/pages/wallet";
 import { AuthProvider } from "@/context/AuthContext";
 import { Web3Provider } from "@/context/Web3Provider";
 import { useAuth } from "@/hooks/use-auth";
@@ -90,6 +91,9 @@ function Router() {
       </Route>
       <Route path="/profile">
         <ProtectedRoute component={Profile} />
+      </Route>
+      <Route path="/wallet">
+        <ProtectedRoute component={Wallet} />
       </Route>
       
       {/* Admin routes */}
