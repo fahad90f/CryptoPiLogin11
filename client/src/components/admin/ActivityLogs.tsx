@@ -67,11 +67,11 @@ export function ActivityLogs() {
         queryParams.append('search', search);
       }
       
-      if (filters.action) {
+      if (filters.action && filters.action !== 'all') {
         queryParams.append('action', filters.action);
       }
       
-      if (filters.status) {
+      if (filters.status && filters.status !== 'all') {
         queryParams.append('status', filters.status);
       }
       
@@ -214,7 +214,7 @@ export function ActivityLogs() {
                   <SelectValue placeholder="Action" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Actions</SelectItem>
+                  <SelectItem value="all">All Actions</SelectItem>
                   <SelectItem value="login">Login</SelectItem>
                   <SelectItem value="logout">Logout</SelectItem>
                   <SelectItem value="register">Register</SelectItem>
@@ -230,7 +230,7 @@ export function ActivityLogs() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="success">Success</SelectItem>
                   <SelectItem value="failure">Failure</SelectItem>
                   <SelectItem value="warning">Warning</SelectItem>
