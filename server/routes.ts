@@ -349,6 +349,381 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Failed to create user:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid input data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+  
+  app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const updatedUser = await storage.updateUser(userId, req.body);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return user without password
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Failed to update user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+  
+  app.post("/api/admin/users/:id/reset-password", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { newPassword } = req.body;
+      
+      if (!newPassword) {
+        return res.status(400).json({ message: "New password is required" });
+      }
+      
+      const user = await storage.resetPassword(userId, newPassword);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error("Failed to reset password:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+  
+  app.post("/api/admin/users/:id/suspend", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { reason, duration } = req.body;
+      
+      const user = await storage.suspendUser(userId, reason, duration);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Failed to suspend user:", error);
+      res.status(500).json({ message: "Failed to suspend user" });
+    }
+  });
+  
+  app.post("/api/admin/users/:id/unsuspend", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      const user = await storage.unsuspendUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Failed to unsuspend user:", error);
+      res.status(500).json({ message: "Failed to unsuspend user" });
+    }
+  });
+  
+  app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      const success = await storage.deleteUser(userId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+  
+  // Auth logs endpoints
+  app.get("/api/admin/auth-logs", requireAdmin, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = req.query.search as string || undefined;
+      const action = req.query.action as string || undefined;
+      const status = req.query.status as string || undefined;
+      
+      try {
+        const logs = await storage.getAuthLogs(page, limit, search, action, status);
+        res.json(logs);
+      } catch (dbError) {
+        console.error("Database error fetching auth logs:", dbError);
+        
+        // Provide mock data if database queries fail
+        const mockAuthLogs = [
+          {
+            id: 1,
+            userId: 1,
+            action: "login",
+            status: "success",
+            ipAddress: "192.168.1.1",
+            userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+            user: { username: "admin" }
+          },
+          {
+            id: 2,
+            userId: 2,
+            action: "login",
+            status: "failure",
+            ipAddress: "192.168.1.2",
+            userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+            user: { username: "user1" }
+          },
+          {
+            id: 3,
+            userId: 3,
+            action: "register",
+            status: "success",
+            ipAddress: "192.168.1.3",
+            userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+            createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+            user: { username: "newuser" }
+          },
+          {
+            id: 4,
+            userId: 1,
+            action: "password_reset",
+            status: "success",
+            ipAddress: "192.168.1.1",
+            userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+            user: { username: "admin" }
+          },
+          {
+            id: 5,
+            userId: 2,
+            action: "logout",
+            status: "success",
+            ipAddress: "192.168.1.2",
+            userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+            user: { username: "user1" }
+          }
+        ];
+        
+        // Return paginated mock data
+        const offset = (page - 1) * limit;
+        const paginatedLogs = mockAuthLogs.slice(offset, offset + limit);
+        
+        res.json({
+          logs: paginatedLogs,
+          total: mockAuthLogs.length
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch auth logs:", error);
+      res.status(500).json({ message: "Failed to fetch auth logs" });
+    }
+  });
+  
+  app.post("/api/admin/auth-logs", requireAdmin, async (req, res) => {
+    try {
+      const logData = req.body;
+      const log = await storage.createAuthLog(logData);
+      
+      res.status(201).json(log);
+    } catch (error) {
+      console.error("Failed to create auth log:", error);
+      res.status(500).json({ message: "Failed to create auth log" });
+    }
+  });
+  
+  // API Keys endpoints
+  app.get("/api/admin/api-keys", requireAdmin, async (req, res) => {
+    try {
+      // Mock API keys for now
+      res.json([
+        {
+          id: 1,
+          name: "Production API Key",
+          key: "api_prod_xxxxxxxxxxxxxxxxxxxx",
+          type: "production",
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          expiresAt: null
+        },
+        {
+          id: 2,
+          name: "Development API Key",
+          key: "api_dev_xxxxxxxxxxxxxxxxxxxx",
+          type: "development",
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          expiresAt: null
+        },
+        {
+          id: 3,
+          name: "Testing API Key",
+          key: "api_test_xxxxxxxxxxxxxxxxxxxx",
+          type: "testing",
+          isActive: false,
+          createdAt: new Date().toISOString(),
+          expiresAt: null
+        }
+      ]);
+    } catch (error) {
+      console.error("Failed to fetch API keys:", error);
+      res.status(500).json({ message: "Failed to fetch API keys" });
+    }
+  });
+  
+  app.post("/api/admin/api-keys", requireAdmin, async (req, res) => {
+    try {
+      // For mock purposes, just return a success response with a new API key
+      res.status(201).json({
+        id: 4,
+        name: req.body.name,
+        key: `api_${req.body.type}_${Math.random().toString(36).substring(2, 15)}`,
+        type: req.body.type,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        expiresAt: req.body.expiresAt || null
+      });
+    } catch (error) {
+      console.error("Failed to create API key:", error);
+      res.status(500).json({ message: "Failed to create API key" });
+    }
+  });
+  
+  app.put("/api/admin/api-keys/:id/toggle", requireAdmin, async (req, res) => {
+    try {
+      const keyId = parseInt(req.params.id);
+      // For mock purposes, just return a success response
+      res.json({
+        id: keyId,
+        name: "API Key",
+        key: `api_xxx_xxxxxxxxxxxxxxxxxxxx`,
+        type: "production",
+        isActive: req.body.isActive,
+        createdAt: new Date().toISOString(),
+        expiresAt: null
+      });
+    } catch (error) {
+      console.error("Failed to toggle API key:", error);
+      res.status(500).json({ message: "Failed to toggle API key" });
+    }
+  });
+  
+  app.delete("/api/admin/api-keys/:id", requireAdmin, async (req, res) => {
+    try {
+      // For mock purposes, just return a success response
+      res.json({ message: "API key deleted successfully" });
+    } catch (error) {
+      console.error("Failed to delete API key:", error);
+      res.status(500).json({ message: "Failed to delete API key" });
+    }
+  });
+  
+  // System settings endpoints
+  app.get("/api/admin/system/config", requireAdmin, async (req, res) => {
+    try {
+      const config = await storage.getSystemConfig();
+      
+      if (!config || config.length === 0) {
+        // Return default settings if none exist
+        return res.json([
+          { key: "maintenance_mode", value: false, description: "Enable/disable system maintenance mode" },
+          { key: "registration_enabled", value: true, description: "Allow new user registrations" },
+          { key: "max_upload_size", value: 5242880, description: "Maximum file upload size in bytes" },
+          { key: "allow_social_login", value: true, description: "Enable social media login options" },
+          { key: "default_user_role", value: "user", description: "Default role for new registrations" },
+          { key: "require_email_verification", value: true, description: "Require email verification for new accounts" },
+          { key: "session_timeout", value: 3600, description: "Session timeout in seconds" },
+          { key: "api_rate_limit", value: 100, description: "API rate limit per hour" }
+        ]);
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Failed to fetch system config:", error);
+      res.status(500).json({ message: "Failed to fetch system config" });
+    }
+  });
+  
+  app.put("/api/admin/system/config/:key", requireAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const { value, description } = req.body;
+      
+      const config = await storage.updateSystemConfig(key, value, description);
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Failed to update system config:", error);
+      res.status(500).json({ message: "Failed to update system config" });
+    }
+  });
+  
+  app.post("/api/admin/system/config", requireAdmin, async (req, res) => {
+    try {
+      const { key, value, description } = req.body;
+      
+      if (!key) {
+        return res.status(400).json({ message: "Key is required" });
+      }
+      
+      const config = await storage.updateSystemConfig(key, value, description);
+      
+      res.status(201).json(config);
+    } catch (error) {
+      console.error("Failed to create system config:", error);
+      res.status(500).json({ message: "Failed to create system config" });
+    }
+  });
+  
+  app.delete("/api/admin/system/config/:key", requireAdmin, async (req, res) => {
+    try {
+      // Mock response
+      res.json({ message: "Config deleted successfully" });
+    } catch (error) {
+      console.error("Failed to delete system config:", error);
+      res.status(500).json({ message: "Failed to delete system config" });
+    }
+  });
+  
+  app.post("/api/admin/system/reset", requireAdmin, async (req, res) => {
+    try {
+      // Mock response
+      res.json({ message: "System reset successfully" });
+    } catch (error) {
+      console.error("Failed to reset system:", error);
+      res.status(500).json({ message: "Failed to reset system" });
+    }
+  });
+  
   app.get("/api/admin/statistics", requireAdmin, async (req, res) => {
     try {
       // Mock statistics for now

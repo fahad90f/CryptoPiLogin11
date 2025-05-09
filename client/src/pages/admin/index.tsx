@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
-import { UserManagement } from "@/components/admin/UserManagement";
-import { SystemSettings } from "@/components/admin/SystemSettings";
-import { ApiKeyManagement } from "@/components/admin/ApiKeyManagement";
-import { ActivityLogs } from "@/components/admin/ActivityLogs";
-import { DashboardMetrics } from "@/components/admin/DashboardMetrics";
+import { useAuth } from "../../hooks/use-auth";
+import { UserManagement } from "../../components/admin/UserManagement";
+import { SystemSettings } from "../../components/admin/SystemSettings";
+import { ApiKeyManagement } from "../../components/admin/ApiKeyManagement";
+import { ActivityLogs } from "../../components/admin/ActivityLogs";
+import { DashboardMetrics } from "../../components/admin/DashboardMetrics";
 
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs";
+} from "../../components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +22,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "../../components/ui/alert-dialog";
 import { UserCog, Settings, Key, ClipboardList, BarChart, ShieldAlert } from "lucide-react";
 
 export default function AdminDashboard() {
