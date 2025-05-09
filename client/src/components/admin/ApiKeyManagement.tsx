@@ -115,16 +115,10 @@ export function ApiKeyManagement() {
         ? null 
         : parseInt(formState.expiresAt, 10);
       
-      return apiRequest('/api/admin/api-keys', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: formState.name,
-          type: formState.type,
-          expiresInDays: expiresIn
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      return apiRequest('POST', '/api/admin/api-keys', {
+        name: formState.name,
+        type: formState.type,
+        expiresInDays: expiresIn
       });
     },
     onSuccess: (response) => {
@@ -150,12 +144,7 @@ export function ApiKeyManagement() {
   // Toggle API key status mutation
   const toggleApiKeyMutation = useMutation({
     mutationFn: async (apiKey: ApiKey) => {
-      return apiRequest(`/api/admin/api-keys/${apiKey.id}/toggle`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      return apiRequest('PATCH', `/api/admin/api-keys/${apiKey.id}/toggle`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/api-keys'] });
@@ -178,9 +167,7 @@ export function ApiKeyManagement() {
     mutationFn: async () => {
       if (!selectedApiKey) return;
       
-      return apiRequest(`/api/admin/api-keys/${selectedApiKey.id}`, {
-        method: 'DELETE',
-      });
+      return apiRequest('DELETE', `/api/admin/api-keys/${selectedApiKey.id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/api-keys'] });
