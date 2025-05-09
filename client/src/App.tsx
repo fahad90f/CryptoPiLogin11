@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Generate from "@/pages/generate";
 import Convert from "@/pages/convert";
@@ -64,7 +65,7 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={() => <Redirect to="/dashboard" />} />
+      <Route path="/" component={Home} />
       
       {/* Auth routes */}
       <Route path="/login" component={Login} />
