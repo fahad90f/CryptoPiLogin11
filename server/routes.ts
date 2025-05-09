@@ -39,7 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Passport local strategy
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    new LocalStrategy(async (username: string, password: string, done: Function) => {
       try {
         const user = await storage.getUserByUsername(username);
         

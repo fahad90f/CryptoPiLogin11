@@ -16,6 +16,7 @@ import AdminDashboard from "@/pages/admin";
 import Profile from "@/pages/profile";
 import Wallet from "@/pages/wallet";
 import { AuthProvider } from "@/context/AuthContext";
+import { FirebaseAuthProvider } from "@/context/FirebaseAuthContext";
 import { Web3Provider } from "@/context/Web3Provider";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
@@ -110,14 +111,16 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Web3Provider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </Web3Provider>
-      </AuthProvider>
+      <FirebaseAuthProvider>
+        <AuthProvider>
+          <Web3Provider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </Web3Provider>
+        </AuthProvider>
+      </FirebaseAuthProvider>
     </QueryClientProvider>
   );
 }
