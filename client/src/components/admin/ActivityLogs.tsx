@@ -75,8 +75,8 @@ export function ActivityLogs() {
         queryParams.append('status', filters.status);
       }
       
-      const response = await apiRequest(`/api/admin/auth-logs?${queryParams.toString()}`);
-      return response;
+      const response = await apiRequest('GET', `/api/admin/auth-logs?${queryParams.toString()}`);
+      return response.json();
     }
   });
   

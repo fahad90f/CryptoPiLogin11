@@ -179,8 +179,8 @@ export function UserManagement() {
         queryParams.append('search', search);
       }
       
-      const response = await apiRequest(`/api/admin/users?${queryParams.toString()}`);
-      return response;
+      const response = await apiRequest('GET', `/api/admin/users?${queryParams.toString()}`);
+      return response.json();
     }
   });
   
@@ -188,7 +188,7 @@ export function UserManagement() {
   const createUserMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const formDataObject = Object.fromEntries(formData.entries());
-      return apiRequest('/api/admin/users', 'POST', formDataObject);
+      return apiRequest('POST', '/api/admin/users', formDataObject);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -211,7 +211,7 @@ export function UserManagement() {
   // Edit user mutation
   const editUserMutation = useMutation({
     mutationFn: async (user: User) => {
-      return apiRequest(`/api/admin/users/${user.id}`, 'PATCH', user);
+      return apiRequest('PATCH', `/api/admin/users/${user.id}`, user);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -234,7 +234,7 @@ export function UserManagement() {
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, password }: { userId: number; password: string }) => {
-      return apiRequest(`/api/admin/users/${userId}/reset-password`, 'POST', { newPassword: password });
+      return apiRequest('POST', `/api/admin/users/${userId}/reset-password`, { newPassword: password });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -258,7 +258,7 @@ export function UserManagement() {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      return apiRequest(`/api/admin/users/${userId}`, 'DELETE');
+      return apiRequest('DELETE', `/api/admin/users/${userId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -281,7 +281,7 @@ export function UserManagement() {
   // Suspend user mutation
   const suspendUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      return apiRequest(`/api/admin/users/${userId}/suspend`, 'POST');
+      return apiRequest('POST', `/api/admin/users/${userId}/suspend`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -304,7 +304,7 @@ export function UserManagement() {
   // Unsuspend user mutation
   const unsuspendUserMutation = useMutation({
     mutationFn: async (user: User) => {
-      return apiRequest(`/api/admin/users/${user.id}/unsuspend`, 'POST');
+      return apiRequest('POST', `/api/admin/users/${user.id}/unsuspend`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
