@@ -85,6 +85,11 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
                 <span className="text-xs">Network: Online</span>
               </div>
               
+              {/* Wallet Connect Button */}
+              <div className="hidden md:block">
+                <WalletConnect />
+              </div>
+              
               <Button className="py-1.5 px-4 rounded-lg bg-accent text-accent-foreground font-medium text-sm">
                 <Plus className="h-4 w-4 mr-1" /> New Flight
               </Button>
