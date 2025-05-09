@@ -78,20 +78,16 @@ export function SystemSettings() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['/api/admin/system/config'],
     queryFn: async () => {
-      const response = await apiRequest('/api/admin/system/config');
-      return response;
+      const response = await apiRequest('GET', '/api/admin/system/config');
+      return response.json();
     }
   });
 
   // Update config mutation
   const updateConfigMutation = useMutation({
     mutationFn: async (params: { key: string; value: any }) => {
-      return apiRequest(`/api/admin/system/config/${params.key}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ value: params.value }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      return apiRequest('PATCH', `/api/admin/system/config/${params.key}`, {
+        value: params.value
       });
     },
     onSuccess: () => {
@@ -114,13 +110,7 @@ export function SystemSettings() {
   // Add config mutation
   const addConfigMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/admin/system/config', {
-        method: 'POST',
-        body: JSON.stringify(newConfig),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      return apiRequest('POST', '/api/admin/system/config', newConfig);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/system/config'] });
@@ -147,9 +137,7 @@ export function SystemSettings() {
   // Delete config mutation
   const deleteConfigMutation = useMutation({
     mutationFn: async (key: string) => {
-      return apiRequest(`/api/admin/system/config/${key}`, {
-        method: 'DELETE',
-      });
+      return apiRequest('DELETE', `/api/admin/system/config/${key}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/system/config'] });
@@ -171,9 +159,7 @@ export function SystemSettings() {
   // Reset system mutation
   const resetSystemMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/admin/system/reset', {
-        method: 'POST',
-      });
+      return apiRequest('POST', '/api/admin/system/reset');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/system/config'] });

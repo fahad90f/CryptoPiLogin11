@@ -54,8 +54,8 @@ export function DashboardMetrics() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['/api/admin/statistics'],
     queryFn: async () => {
-      const response = await apiRequest('/api/admin/statistics');
-      return response;
+      const response = await apiRequest('GET', '/api/admin/statistics');
+      return response.json();
     }
   });
 
