@@ -1,5 +1,21 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { format } from "date-fns";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Card,
   CardContent,
@@ -8,14 +24,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -23,13 +47,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { 
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,19 +70,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { MoreHorizontal, Search, UserCog, Ban, RefreshCw, Trash2, Edit, LockKeyhole } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+  RefreshCw,
+  MoreHorizontal,
+  UserPlus,
+  Lock,
+  Edit,
+  Ban,
+  CheckCircle,
+  UserX,
+  User,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
-type User = {
+interface User {
   id: number;
   username: string;
   email: string | null;
@@ -64,526 +96,896 @@ type User = {
   lastLoginAt: string | null;
   lastLogoutAt: string | null;
   createdAt: string;
-};
+}
+
+// Form schemas
+const createUserSchema = z.object({
+  username: z.string().min(3, {
+    message: "Username must be at least 3 characters.",
+  }),
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
+  }),
+  email: z.string().email().optional().nullable(),
+  displayName: z.string().optional().nullable(),
+  role: z.enum(["user", "admin"]),
+});
+
+const editUserSchema = z.object({
+  email: z.string().email().optional().nullable(),
+  displayName: z.string().optional().nullable(),
+  role: z.enum(["user", "admin"]),
+  isActive: z.boolean(),
+});
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
+  }),
+});
 
 export function UserManagement() {
   const { toast } = useToast();
-  const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [pageSize, setPageSize] = useState(10);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [suspensionReason, setSuspensionReason] = useState("");
-  const [suspensionDuration, setSuspensionDuration] = useState("7");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSuspendDialogOpen, setIsSuspendDialogOpen] = useState(false);
   
-  const limit = 10;
-
-  // Fetch users from API
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['/api/admin/users', page, search],
+  // Forms
+  const createForm = useForm<z.infer<typeof createUserSchema>>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+      email: "",
+      displayName: "",
+      role: "user",
+    },
+  });
+  
+  const editForm = useForm<z.infer<typeof editUserSchema>>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: {
+      email: "",
+      displayName: "",
+      role: "user",
+      isActive: true,
+    },
+  });
+  
+  const resetPasswordForm = useForm<z.infer<typeof resetPasswordSchema>>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: "",
+    },
+  });
+  
+  // Fetch users
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['/api/admin/users', page, pageSize, search],
     queryFn: async () => {
       const queryParams = new URLSearchParams({
         page: page.toString(),
-        limit: limit.toString()
+        limit: pageSize.toString(),
       });
       
       if (search) {
         queryParams.append('search', search);
       }
       
-      return await apiRequest<{ users: User[], total: number }>(`/api/admin/users?${queryParams.toString()}`);
+      const response = await apiRequest(`/api/admin/users?${queryParams.toString()}`);
+      return response;
     }
   });
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(1);
-    refetch();
-  };
-
-  const handleEditUser = async (formData: FormData) => {
-    if (!selectedUser) return;
-    
-    try {
-      const userData = {
-        username: formData.get('username') as string,
-        email: formData.get('email') as string,
-        displayName: formData.get('displayName') as string,
-        role: formData.get('role') as string,
-      };
-      
-      await apiRequest(`/api/admin/users/${selectedUser.id}`, {
+  
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      return apiRequest('/api/admin/users', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      setIsCreateDialogOpen(false);
+      createForm.reset();
+      toast({
+        title: "User created",
+        description: "User has been created successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to create user",
+        description: "There was an error creating the user. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Edit user mutation
+  const editUserMutation = useMutation({
+    mutationFn: async (user: User) => {
+      return apiRequest(`/api/admin/users/${user.id}`, {
         method: 'PATCH',
-        body: JSON.stringify(userData),
+        body: JSON.stringify(user),
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
-      
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      setIsEditDialogOpen(false);
+      setSelectedUser(null);
       toast({
-        title: "User Updated",
-        description: `User ${userData.username} has been updated successfully.`
+        title: "User updated",
+        description: "User has been updated successfully.",
       });
-      
-      setIsEditModalOpen(false);
-      refetch();
-    } catch (error) {
+    },
+    onError: () => {
       toast({
-        title: "Update Failed",
+        title: "Failed to update user",
         description: "There was an error updating the user. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
-  };
-
-  const handleResetPassword = async () => {
-    if (!selectedUser || !newPassword) return;
-    
-    try {
-      await apiRequest(`/api/admin/users/${selectedUser.id}/reset-password`, {
+  });
+  
+  // Reset password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: number; password: string }) => {
+      return apiRequest(`/api/admin/users/${userId}/reset-password`, {
         method: 'POST',
-        body: JSON.stringify({ newPassword }),
+        body: JSON.stringify({ password }),
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
-      
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      setIsResetPasswordDialogOpen(false);
+      setSelectedUser(null);
+      resetPasswordForm.reset();
       toast({
-        title: "Password Reset",
-        description: `Password for ${selectedUser.username} has been reset successfully.`
+        title: "Password reset",
+        description: "User's password has been reset successfully.",
       });
-      
-      setIsPasswordModalOpen(false);
-      setNewPassword("");
-    } catch (error) {
+    },
+    onError: () => {
       toast({
-        title: "Reset Failed",
+        title: "Failed to reset password",
         description: "There was an error resetting the password. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
-  };
-
-  const handleSuspendUser = async () => {
-    if (!selectedUser) return;
-    
-    try {
-      await apiRequest(`/api/admin/users/${selectedUser.id}/suspend`, {
-        method: 'POST',
-        body: JSON.stringify({
-          reason: suspensionReason,
-          duration: parseInt(suspensionDuration)
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+  });
+  
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      return apiRequest(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
       });
-      
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      setIsDeleteDialogOpen(false);
+      setSelectedUser(null);
       toast({
-        title: "User Suspended",
-        description: `User ${selectedUser.username} has been suspended.`
+        title: "User deleted",
+        description: "User has been deleted successfully.",
       });
-      
-      setIsSuspendModalOpen(false);
-      setSuspensionReason("");
-      setSuspensionDuration("7");
-      refetch();
-    } catch (error) {
+    },
+    onError: () => {
       toast({
-        title: "Suspension Failed",
-        description: "There was an error suspending the user. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleUnsuspendUser = async (user: User) => {
-    try {
-      await apiRequest(`/api/admin/users/${user.id}/unsuspend`, {
-        method: 'POST'
-      });
-      
-      toast({
-        title: "User Unsuspended",
-        description: `User ${user.username} has been unsuspended.`
-      });
-      
-      refetch();
-    } catch (error) {
-      toast({
-        title: "Action Failed",
-        description: "There was an error unsuspending the user. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-    
-    try {
-      await apiRequest(`/api/admin/users/${selectedUser.id}`, {
-        method: 'DELETE'
-      });
-      
-      toast({
-        title: "User Deleted",
-        description: `User ${selectedUser.username} has been deleted permanently.`
-      });
-      
-      setIsDeleteModalOpen(false);
-      refetch();
-    } catch (error) {
-      toast({
-        title: "Deletion Failed",
+        title: "Failed to delete user",
         description: "There was an error deleting the user. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
+  });
+  
+  // Suspend user mutation
+  const suspendUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      return apiRequest(`/api/admin/users/${userId}/suspend`, {
+        method: 'POST',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      setIsSuspendDialogOpen(false);
+      setSelectedUser(null);
+      toast({
+        title: "User suspended",
+        description: "User has been suspended successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to suspend user",
+        description: "There was an error suspending the user. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Unsuspend user mutation
+  const unsuspendUserMutation = useMutation({
+    mutationFn: async (user: User) => {
+      return apiRequest(`/api/admin/users/${user.id}/unsuspend`, {
+        method: 'POST',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: "User unsuspended",
+        description: "User has been unsuspended successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to unsuspend user",
+        description: "There was an error unsuspending the user. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Create new user
+  const handleCreateUser = async (values: z.infer<typeof createUserSchema>) => {
+    createUserMutation.mutate(values as any);
+  };
+  
+  // Edit user
+  const handleEditUser = async (values: z.infer<typeof editUserSchema>) => {
+    if (!selectedUser) return;
+    
+    editUserMutation.mutate({
+      ...selectedUser,
+      ...values,
+    });
+  };
+  
+  // Reset user password
+  const handleResetPassword = async (values: z.infer<typeof resetPasswordSchema>) => {
+    if (!selectedUser) return;
+    
+    resetPasswordMutation.mutate({
+      userId: selectedUser.id,
+      password: values.password,
+    });
+  };
+  
+  // Delete user
+  const handleDeleteUser = () => {
+    if (!selectedUser) return;
+    
+    deleteUserMutation.mutate(selectedUser.id);
+  };
+  
+  // Suspend user
+  const handleSuspendUser = () => {
+    if (!selectedUser) return;
+    
+    suspendUserMutation.mutate(selectedUser.id);
+  };
+  
+  // Unsuspend user
+  const handleUnsuspendUser = async (user: User) => {
+    unsuspendUserMutation.mutate(user);
+  };
+  
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    if (newPage > 0 && (!data || newPage <= Math.ceil(data.total / pageSize))) {
+      setPage(newPage);
+    }
+  };
+  
+  // Handle search input
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    setPage(1); // Reset to first page on new search
+  };
+  
+  // Handle page size change
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(Number(value));
+    setPage(1); // Reset to first page on page size change
+  };
+  
+  // Format date
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Never";
+    const date = new Date(dateString);
+    return format(date, "MMM d, yyyy h:mm a");
+  };
+  
+  // Open edit dialog for user
+  const openEditDialog = (user: User) => {
+    setSelectedUser(user);
+    editForm.reset({
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role as "user" | "admin",
+      isActive: user.isActive,
+    });
+    setIsEditDialogOpen(true);
+  };
+  
+  // Get role badge
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Badge className="bg-purple-600">Admin</Badge>;
+      default:
+        return <Badge variant="outline">User</Badge>;
+    }
+  };
+  
+  // Get status badge
+  const getStatusBadge = (isActive: boolean, isSuspended: boolean) => {
+    if (isSuspended) {
+      return <Badge variant="destructive">Suspended</Badge>;
+    }
+    
+    if (isActive) {
+      return <Badge variant="success">Active</Badge>;
+    }
+    
+    return <Badge variant="secondary">Inactive</Badge>;
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>
-              Manage user accounts, permissions and status
-            </CardDescription>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col space-y-2 md:flex-row md:justify-between md:items-center md:space-y-0">
+            <div>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>Manage user accounts and permissions</CardDescription>
+            </div>
+            <Button 
+              onClick={() => setIsCreateDialogOpen(true)}
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <UserPlus className="h-4 w-4" />
+              Create User
+            </Button>
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <form onSubmit={handleSearch} className="flex w-full max-w-sm items-center space-x-2">
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col space-y-2 md:flex-row md:justify-between md:items-center md:space-y-0 mb-4">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search users..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-[200px]"
+                onChange={handleSearchChange}
+                className="pl-8"
               />
-              <Button type="submit" size="icon" variant="secondary">
-                <Search className="h-4 w-4" />
-              </Button>
-            </form>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Select
+                value={pageSize.toString()}
+                onValueChange={handlePageSizeChange}
+              >
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">per page</span>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Username</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Login</TableHead>
-                <TableHead>Registered</TableHead>
-                <TableHead className="w-[70px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    Loading users...
-                  </TableCell>
-                </TableRow>
-              ) : data?.users.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    No users found. Try adjusting your search.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data?.users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.username}</TableCell>
-                    <TableCell>{user.email || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.role === "admin" ? "destructive" : "secondary"}>
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {user.isSuspended ? (
-                        <Badge variant="destructive">Suspended</Badge>
-                      ) : user.isActive ? (
-                        <Badge variant="success">Active</Badge>
-                      ) : (
-                        <Badge variant="outline">Inactive</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : "Never"}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setIsEditModalOpen(true);
-                            }}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setIsPasswordModalOpen(true);
-                            }}
-                          >
-                            <LockKeyhole className="mr-2 h-4 w-4" />
-                            Reset Password
-                          </DropdownMenuItem>
-                          {user.isSuspended ? (
+
+          {isLoading ? (
+            <div className="py-8 text-center">
+              <RefreshCw className="animate-spin h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="mt-2 text-muted-foreground">Loading users...</p>
+            </div>
+          ) : isError ? (
+            <div className="py-8 text-center">
+              <X className="h-8 w-8 mx-auto text-destructive" />
+              <p className="mt-2 text-muted-foreground">Failed to load users. Please try again.</p>
+            </div>
+          ) : data && data.users.length > 0 ? (
+            <div className="rounded-md border">
+              <Table>
+                <TableCaption>A list of all users in the system.</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Username</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Display Name</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last Login</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.users.map((user: User) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.username}</TableCell>
+                      <TableCell>{user.email || '—'}</TableCell>
+                      <TableCell>{user.displayName || '—'}</TableCell>
+                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell>{getStatusBadge(user.isActive, user.isSuspended)}</TableCell>
+                      <TableCell>{formatDate(user.lastLoginAt)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => handleUnsuspendUser(user)}
+                              onClick={() => openEditDialog(user)}
                             >
-                              <RefreshCw className="mr-2 h-4 w-4" />
-                              Unsuspend
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit User
                             </DropdownMenuItem>
-                          ) : (
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedUser(user);
-                                setIsSuspendModalOpen(true);
+                                setIsResetPasswordDialogOpen(true);
                               }}
                             >
-                              <Ban className="mr-2 h-4 w-4" />
-                              Suspend
+                              <Lock className="h-4 w-4 mr-2" />
+                              Reset Password
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setIsDeleteModalOpen(true);
-                            }}
-                            className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        
-        {data && (
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
-              Showing {data.users.length} of {data.total} users
+                            
+                            {user.isSuspended ? (
+                              <DropdownMenuItem
+                                onClick={() => handleUnsuspendUser(user)}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Unsuspend User
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setIsSuspendDialogOpen(true);
+                                }}
+                                className="text-amber-600 focus:text-amber-600"
+                              >
+                                <Ban className="h-4 w-4 mr-2" />
+                                Suspend User
+                              </DropdownMenuItem>
+                            )}
+                            
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Delete User
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button
+          ) : (
+            <div className="py-8 text-center">
+              <User className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="mt-2 text-muted-foreground">No users found. Create your first user to get started.</p>
+              <Button 
+                onClick={() => setIsCreateDialogOpen(true)} 
+                className="mt-4"
                 variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
               >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => p + 1)}
-                disabled={data.users.length < limit}
-              >
-                Next
+                Create User
               </Button>
             </div>
-          </div>
-        )}
-      </CardContent>
-      
-      {/* Edit User Modal */}
+          )}
+          
+          {data && data.users.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to{" "}
+                <span className="font-medium">
+                  {Math.min(page * pageSize, data.total)}
+                </span>{" "}
+                of <span className="font-medium">{data.total}</span> users
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page * pageSize >= data.total}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create User Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New User</DialogTitle>
+            <DialogDescription>
+              Add a new user to the system. All fields marked with * are required.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...createForm}>
+            <form onSubmit={createForm.handleSubmit(handleCreateUser)} className="space-y-4">
+              <FormField
+                control={createForm.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="username" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      The unique username used to login.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password *</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="********" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Must be at least 8 characters.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="user@example.com" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      The user's permission level in the system.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button type="submit" disabled={createUserMutation.isPending}>
+                  {createUserMutation.isPending ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create User"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
       {selectedUser && (
-        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
               <DialogDescription>
-                Update user information and permissions for {selectedUser.username}
+                Update user information for {selectedUser.username}.
               </DialogDescription>
             </DialogHeader>
-            <form action={handleEditUser}>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <label htmlFor="username" className="text-sm font-medium">Username</label>
-                  <Input
-                    id="username"
-                    name="username"
-                    defaultValue={selectedUser.username}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="email" className="text-sm font-medium">Email</label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    defaultValue={selectedUser.email || ""}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="displayName" className="text-sm font-medium">Display Name</label>
-                  <Input
-                    id="displayName"
-                    name="displayName"
-                    defaultValue={selectedUser.displayName || ""}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="role" className="text-sm font-medium">Role</label>
-                  <Select name="role" defaultValue={selectedUser.role}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Save Changes</Button>
-              </DialogFooter>
-            </form>
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(handleEditUser)} className="space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="user@example.com" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="displayName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Display Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Status</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(value === "true")}
+                        defaultValue={field.value ? "true" : "false"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Inactive accounts cannot log in but are not deleted.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <Button type="submit" disabled={editUserMutation.isPending}>
+                    {editUserMutation.isPending ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       )}
-      
-      {/* Reset Password Modal */}
+
+      {/* Reset Password Dialog */}
       {selectedUser && (
-        <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
+        <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Reset Password</DialogTitle>
               <DialogDescription>
-                Set a new password for {selectedUser.username}
+                Set a new password for {selectedUser.username}.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <label htmlFor="newPassword" className="text-sm font-medium">New Password</label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
+            <Form {...resetPasswordForm}>
+              <form onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)} className="space-y-4">
+                <FormField
+                  control={resetPasswordForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="********" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Must be at least 8 characters.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setIsPasswordModalOpen(false);
-                setNewPassword("");
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={handleResetPassword} disabled={!newPassword}>
-                Reset Password
-              </Button>
-            </DialogFooter>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <Button type="submit" disabled={resetPasswordMutation.isPending}>
+                    {resetPasswordMutation.isPending ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Resetting...
+                      </>
+                    ) : (
+                      "Reset Password"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       )}
-      
-      {/* Suspend User Modal */}
+
+      {/* Delete User Dialog */}
       {selectedUser && (
-        <Dialog open={isSuspendModalOpen} onOpenChange={setIsSuspendModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Suspend User</DialogTitle>
-              <DialogDescription>
-                Suspend access for {selectedUser.username}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <label htmlFor="suspensionReason" className="text-sm font-medium">Reason for Suspension</label>
-                <Input
-                  id="suspensionReason"
-                  value={suspensionReason}
-                  onChange={(e) => setSuspensionReason(e.target.value)}
-                  placeholder="Violation of terms of service"
-                />
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="suspensionDuration" className="text-sm font-medium">Duration (days)</label>
-                <Select value={suspensionDuration} onValueChange={setSuspensionDuration}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 day</SelectItem>
-                    <SelectItem value="3">3 days</SelectItem>
-                    <SelectItem value="7">7 days</SelectItem>
-                    <SelectItem value="14">14 days</SelectItem>
-                    <SelectItem value="30">30 days</SelectItem>
-                    <SelectItem value="0">Indefinite</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setIsSuspendModalOpen(false);
-                setSuspensionReason("");
-                setSuspensionDuration("7");
-              }}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleSuspendUser}>
-                Suspend User
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-      
-      {/* Delete User Confirmation */}
-      {selectedUser && (
-        <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogTitle>Delete User</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will permanently delete the user account for <strong>{selectedUser.username}</strong> along with all associated data. This action cannot be undone.
+                Are you sure you want to delete {selectedUser.username}? This action cannot be undone and will permanently remove the user account and all associated data.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Delete User
+              <AlertDialogAction
+                onClick={handleDeleteUser}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteUserMutation.isPending}
+              >
+                {deleteUserMutation.isPending ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete User"
+                )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </Card>
+
+      {/* Suspend User Dialog */}
+      {selectedUser && (
+        <AlertDialog open={isSuspendDialogOpen} onOpenChange={setIsSuspendDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Suspend User</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to suspend {selectedUser.username}? The user will be unable to login or access the system until unsuspended.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleSuspendUser}
+                className="bg-amber-600 text-white hover:bg-amber-700"
+                disabled={suspendUserMutation.isPending}
+              >
+                {suspendUserMutation.isPending ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Suspending...
+                  </>
+                ) : (
+                  "Suspend User"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Card,
   CardContent,
@@ -6,14 +7,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { apiRequest } from "@/lib/queryClient";
-import { RefreshCw, Users, ArrowUpRight, ArrowDownRight, Wallet, Activity, ChevronRight, Download } from "lucide-react";
-import { useState } from "react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
+import { RefreshCw, Users, DollarSign, ArrowUpDown, Wallet } from "lucide-react";
+import { formatCompactNumber, getRandomColor } from "@/lib/utils";
 
-// Types for statistics data
 type SystemStats = {
   totalUsers: number;
   activeUsers: number;
@@ -39,345 +50,219 @@ type SystemStats = {
 };
 
 export function DashboardMetrics() {
-  const [timeframe, setTimeframe] = useState("week");
-  
-  // Fetch system statistics
-  const { data: stats, isLoading, refetch } = useQuery({
-    queryKey: ['/api/admin/statistics', timeframe],
+  // Fetch statistics
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['/api/admin/statistics'],
     queryFn: async () => {
-      return await apiRequest<SystemStats>(`/api/admin/statistics?period=${timeframe}`);
+      const response = await apiRequest('/api/admin/statistics');
+      return response;
     }
   });
 
-  // Custom Recharts tooltip
+  // Format transaction type label
+  const formatTransactionType = (type: string) => {
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
+  // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-background border rounded-md p-2 shadow-md text-sm">
+        <div className="bg-background border border-border p-2 rounded-md shadow-md">
           <p className="font-medium">{label}</p>
-          <p>{`${payload[0].name}: ${payload[0].value}`}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color }}>
+              {entry.name}: {
+                entry.name.includes("Amount") || entry.name.includes("Revenue")
+                  ? `$${entry.value.toLocaleString()}`
+                  : entry.value.toLocaleString()
+              }
+            </p>
+          ))}
         </div>
       );
     }
     return null;
   };
 
-  // Transform data for charts
-  const transactionTypeData = stats?.transactionsByType || [
-    { type: 'generate', count: 42 },
-    { type: 'convert', count: 28 },
-    { type: 'transfer', count: 15 }
-  ];
-
-  const userGrowthData = stats?.userGrowth || [
-    { date: 'Mon', count: 4 },
-    { date: 'Tue', count: 7 },
-    { date: 'Wed', count: 5 },
-    { date: 'Thu', count: 8 },
-    { date: 'Fri', count: 12 },
-    { date: 'Sat', count: 9 },
-    { date: 'Sun', count: 11 }
-  ];
-
-  const revenueData = stats?.revenueData || [
-    { date: 'Mon', amount: 1200 },
-    { date: 'Tue', amount: 1800 },
-    { date: 'Wed', amount: 1400 },
-    { date: 'Thu', amount: 2200 },
-    { date: 'Fri', amount: 1900 },
-    { date: 'Sat', amount: 1600 },
-    { date: 'Sun', amount: 2100 }
-  ];
-
-  // Colors for pie chart
-  const COLORS = ['#3B82F6', '#10B981', '#F97316', '#8B5CF6'];
-
-  // Loading skeleton
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array(4).fill(0).map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="pb-2">
-                <div className="h-4 bg-muted rounded w-24"></div>
-                <div className="h-7 bg-muted rounded w-16"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-4 bg-muted rounded w-32"></div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {Array(8).fill(0).map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader className="h-20 bg-muted rounded-t-lg"></CardHeader>
+            <CardContent className="h-24 bg-muted rounded-b-lg"></CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-8 text-center">
+        <div className="mx-auto h-12 w-12 text-destructive">
+          <RefreshCw className="h-12 w-12" />
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {Array(2).fill(0).map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="pb-2">
-                <div className="h-5 bg-muted rounded w-40"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 bg-muted rounded w-full"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <p className="mt-4 text-lg font-medium">Failed to load dashboard metrics</p>
+        <p className="text-muted-foreground">There was an error loading the metrics. Please try again later.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <Tabs value={timeframe} onValueChange={setTimeframe} className="w-[400px]">
-          <TabsList>
-            <TabsTrigger value="day">Today</TabsTrigger>
-            <TabsTrigger value="week">This Week</TabsTrigger>
-            <TabsTrigger value="month">This Month</TabsTrigger>
-            <TabsTrigger value="year">This Year</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
-      </div>
-      
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6">
+      {/* Summary cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* User metrics */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Users</CardDescription>
-            <CardTitle className="text-2xl">
-              {stats?.totalUsers.toLocaleString() || "0"}
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="flex justify-between items-center pt-0">
-            <div className="flex items-center text-sm">
-              <Users className="text-muted-foreground h-4 w-4 mr-1" />
-              <span className="text-muted-foreground">
-                {stats?.newUsersToday || 0} new today
-              </span>
-            </div>
-            <div className="flex items-center">
-              <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-sm text-green-500">
-                5.2%
-              </span>
-            </div>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.totalUsers.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              +{data.newUsersToday} new today
+            </p>
           </CardContent>
         </Card>
         
+        {/* Wallet metrics */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Active Wallets</CardDescription>
-            <CardTitle className="text-2xl">
-              {stats?.activeWallets.toLocaleString() || "0"}
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Wallets</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="flex justify-between items-center pt-0">
-            <div className="flex items-center text-sm">
-              <Wallet className="text-muted-foreground h-4 w-4 mr-1" />
-              <span className="text-muted-foreground">
-                {Math.round((stats?.activeWallets || 0) / (stats?.totalUsers || 1) * 100)}% of users
-              </span>
-            </div>
-            <div className="flex items-center">
-              <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-sm text-green-500">
-                3.1%
-              </span>
-            </div>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.activeWallets.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              {((data.activeWallets / data.totalUsers) * 100).toFixed(1)}% of users
+            </p>
           </CardContent>
         </Card>
         
+        {/* Transaction metrics */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Transactions</CardDescription>
-            <CardTitle className="text-2xl">
-              {stats?.totalTransactions.toLocaleString() || "0"}
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="flex justify-between items-center pt-0">
-            <div className="flex items-center text-sm">
-              <Activity className="text-muted-foreground h-4 w-4 mr-1" />
-              <span className="text-muted-foreground">
-                {stats?.transactionsToday || 0} today
-              </span>
-            </div>
-            <div className="flex items-center">
-              <ArrowDownRight className="h-4 w-4 text-red-500 mr-1" />
-              <span className="text-sm text-red-500">
-                2.5%
-              </span>
-            </div>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.totalTransactions.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              +{data.transactionsToday} transactions today
+            </p>
           </CardContent>
         </Card>
         
+        {/* Volume metrics */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Volume</CardDescription>
-            <CardTitle className="text-2xl">
-              ${stats?.totalVolume || "0"}
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="flex justify-between items-center pt-0">
-            <div className="flex items-center text-sm">
-              <Activity className="text-muted-foreground h-4 w-4 mr-1" />
-              <span className="text-muted-foreground">
-                ${stats?.volumeToday || "0"} today
-              </span>
-            </div>
-            <div className="flex items-center">
-              <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-sm text-green-500">
-                7.4%
-              </span>
-            </div>
+          <CardContent>
+            <div className="text-2xl font-bold">${data.totalVolume}</div>
+            <p className="text-xs text-muted-foreground">
+              +${data.volumeToday} volume today
+            </p>
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* User Growth Chart */}
+        <Card className="col-span-1">
           <CardHeader>
-            <CardTitle className="text-lg">User Growth</CardTitle>
-            <CardDescription>
-              New user registrations over time
-            </CardDescription>
+            <CardTitle>User Growth</CardTitle>
+            <CardDescription>New user registrations over time</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={userGrowthData}>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="count" name="Users" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={data.userGrowth}
+                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+              >
+                <defs>
+                  <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0284c7" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#0284c7" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" />
+                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <Tooltip content={<CustomTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  name="New Users"
+                  stroke="#0284c7"
+                  fillOpacity={1}
+                  fill="url(#colorUsers)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
-        
-        <Card>
+
+        {/* Transactions by Type Chart */}
+        <Card className="col-span-1">
           <CardHeader>
-            <CardTitle className="text-lg">Transaction Types</CardTitle>
-            <CardDescription>
-              Distribution of transaction types
-            </CardDescription>
+            <CardTitle>Transactions by Type</CardTitle>
+            <CardDescription>Distribution of transaction types</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={transactionTypeData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                    nameKey="type"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {transactionTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data.transactionsByType}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={5}
+                  dataKey="count"
+                  nameKey="type"
+                  label={({ type }) => formatTransactionType(type)}
+                >
+                  {data.transactionsByType.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={getRandomColor(index)} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend formatter={(value) => formatTransactionType(value)} />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
-        
-        <Card className="lg:col-span-2">
+
+        {/* Revenue Chart */}
+        <Card className="col-span-2">
           <CardHeader>
-            <CardTitle className="text-lg">Revenue Overview</CardTitle>
-            <CardDescription>
-              Platform revenue over time
-            </CardDescription>
+            <CardTitle>Revenue Overview</CardTitle>
+            <CardDescription>Daily revenue in USD</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueData}>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="amount"
-                    name="Revenue ($)"
-                    stroke="#10B981"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 8 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">User Management</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button variant="ghost" className="w-full justify-between">
-              View all users
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" className="w-full justify-between">
-              Recent sign ups
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Transaction Monitoring</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button variant="ghost" className="w-full justify-between">
-              View all transactions
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" className="w-full justify-between">
-              Flagged transactions
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Reports</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button variant="ghost" className="w-full justify-between">
-              Monthly summary
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" className="w-full justify-between">
-              Security audit
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={data.revenueData}
+                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="date" />
+                <YAxis formatter={(value) => `$${formatCompactNumber(value)}`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar
+                  dataKey="amount"
+                  name="Revenue"
+                  fill="#16a34a"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>

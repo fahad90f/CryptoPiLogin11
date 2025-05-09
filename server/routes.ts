@@ -91,20 +91,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username already exists" });
       }
       
-      // Create new user
-      const user = await storage.createUser(data);
+      // Create new user with default role if not specified
+      const userData = {
+        ...data,
+        role: data.role || "user"  // Ensure role is specified
+      };
       
-      // Log in the user
-      req.login(user, (err) => {
-        if (err) {
-          return res.status(500).json({ message: "Login failed after registration" });
-        }
+      try {
+        // Create new user
+        const user = await storage.createUser(userData);
         
-        // Return user data without password
-        const { password, ...userWithoutPassword } = user;
-        return res.status(201).json(userWithoutPassword);
-      });
+        // Log in the user
+        req.login(user, (err) => {
+          if (err) {
+            console.error("Login error after registration:", err);
+            return res.status(500).json({ message: "Login failed after registration" });
+          }
+          
+          // Return user data without password
+          const { password, ...userWithoutPassword } = user;
+          return res.status(201).json(userWithoutPassword);
+        });
+      } catch (dbError) {
+        console.error("Database error during user creation:", dbError);
+        return res.status(500).json({ message: "Failed to register user - database error" });
+      }
     } catch (error) {
+      console.error("Registration error:", error);
+      
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
           message: "Invalid input data", 
@@ -186,6 +200,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(crypto);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch cryptocurrency" });
+    }
+  });
+  
+  // Profile routes
+  app.get("/api/profile", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.id;
+      
+      // Get user data
+      const userData = await storage.getUser(userId);
+      if (!userData) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get wallets, tokens, and transactions
+      const wallets = await storage.getWalletsByUserId(userId);
+      const tokens = await storage.getTokensByUserId(userId);
+      const transactions = await storage.getTransactionsByUserId(userId);
+      
+      // Return profile data without password
+      const { password: _, ...userProfile } = userData;
+      
+      res.json({
+        user: userProfile,
+        wallets,
+        tokens,
+        recentTransactions: transactions.slice(0, 5)
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+  
+  app.patch("/api/profile", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.id;
+      const { displayName, email, phoneNumber } = req.body;
+      
+      // Update user
+      const updatedUser = await storage.updateUser(userId, {
+        displayName,
+        email,
+        phoneNumber,
+        updatedAt: new Date()
+      });
+      
+      // Return updated user without password
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+  
+  app.put("/api/profile/password", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.id;
+      const { currentPassword, newPassword } = req.body;
+      
+      // Verify current password
+      const userData = await storage.getUser(userId);
+      if (!userData || userData.password !== currentPassword) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      
+      // Update password
+      await storage.updateUser(userId, {
+        password: newPassword,
+        updatedAt: new Date()
+      });
+      
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update password" });
+    }
+  });
+  
+  app.get("/api/profile/performance", requireAuth, async (req, res) => {
+    try {
+      // Mock performance data for now
+      const data = [
+        { date: "Jan", value: 1000 },
+        { date: "Feb", value: 1200 },
+        { date: "Mar", value: 900 },
+        { date: "Apr", value: 1500 },
+        { date: "May", value: 2000 },
+        { date: "Jun", value: 1800 },
+        { date: "Jul", value: 2200 },
+      ];
+      
+      res.json({
+        data,
+        currentValue: 2200,
+        growthPercentage: "+120%",
+        monthlyChange: "+22%"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch performance data" });
+    }
+  });
+  
+  // Admin routes
+  const requireAdmin = (req: Request, res: Response, next: Function) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    const user = req.user as any;
+    if (user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    next();
+  };
+  
+  // Admin API Routes
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = req.query.search as string || undefined;
+      
+      try {
+        // Get all users from database
+        const { users, total } = await storage.getAllUsers(page, limit, search);
+        
+        // Map to remove passwords
+        const safeUsers = users.map(user => {
+          const { password, ...userWithoutPassword } = user;
+          return userWithoutPassword;
+        });
+        
+        res.json({
+          users: safeUsers,
+          total
+        });
+      } catch (dbError) {
+        console.error("Database error fetching users:", dbError);
+        res.status(500).json({ message: "Database error fetching users" });
+      }
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+  
+  app.get("/api/admin/statistics", requireAdmin, async (req, res) => {
+    try {
+      // Mock statistics for now
+      res.json({
+        totalUsers: 243,
+        activeUsers: 156,
+        newUsersToday: 8,
+        totalTransactions: 1254,
+        transactionsToday: 72,
+        totalVolume: "42,500",
+        volumeToday: "3,800",
+        activeWallets: 189,
+        conversionRate: 76.5,
+        userGrowth: [
+          { date: "Mon", count: 4 },
+          { date: "Tue", count: 7 },
+          { date: "Wed", count: 5 },
+          { date: "Thu", count: 8 },
+          { date: "Fri", count: 12 },
+          { date: "Sat", count: 9 },
+          { date: "Sun", count: 11 }
+        ],
+        transactionsByType: [
+          { type: 'generate', count: 42 },
+          { type: 'convert', count: 28 },
+          { type: 'transfer', count: 15 }
+        ],
+        revenueData: [
+          { date: 'Mon', amount: 1200 },
+          { date: 'Tue', amount: 1800 },
+          { date: 'Wed', amount: 1400 },
+          { date: 'Thu', amount: 2200 },
+          { date: 'Fri', amount: 1900 },
+          { date: 'Sat', amount: 1600 },
+          { date: 'Sun', amount: 2100 }
+        ]
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch statistics" });
+    }
+  });
+  
+  app.get("/api/integrations/coinmarketcap/listings", requireAuth, async (req, res) => {
+    try {
+      // Mock data until API integration is implemented
+      const data = Array(20).fill(0).map((_, i) => ({
+        id: i + 1,
+        name: `Crypto ${i + 1}`,
+        symbol: `CR${i + 1}`,
+        quote: {
+          USD: {
+            price: Math.random() * 10000,
+            percent_change_1h: (Math.random() - 0.5) * 10,
+            percent_change_24h: (Math.random() - 0.5) * 20,
+            percent_change_7d: (Math.random() - 0.5) * 30,
+            market_cap: Math.random() * 1000000000,
+            volume_24h: Math.random() * 500000000,
+            circulating_supply: Math.random() * 100000000
+          }
+        }
+      }));
+      
+      res.json({
+        status: { 
+          timestamp: new Date().toISOString(),
+          error_code: 0,
+          error_message: null,
+          credit_count: 1
+        },
+        data
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch cryptocurrency listings" });
     }
   });
   

@@ -97,10 +97,64 @@ export class MemStorage implements IStorage {
       ...insertUser, 
       id,
       email: insertUser.email || null,
-      createdAt: timestamp
+      displayName: insertUser.displayName || null,
+      phoneNumber: null,
+      profilePicture: null,
+      role: insertUser.role || "user",
+      isActive: true,
+      isSuspended: false,
+      suspensionReason: null,
+      suspensionEndDate: null,
+      lastLoginAt: null,
+      lastLogoutAt: null,
+      preferences: {},
+      createdAt: timestamp,
+      updatedAt: timestamp
     };
     this.users.set(id, user);
     return user;
+  }
+  
+  // Update user methods
+  async updateUser(id: number, data: Partial<User>): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const updatedUser = { ...user, ...data };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async updateUserLastLogin(id: number): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const updatedUser = { 
+      ...user, 
+      lastLoginAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async updateUserLastLogout(id: number): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const updatedUser = { 
+      ...user, 
+      lastLogoutAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
   
   // Wallet methods
@@ -202,6 +256,55 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+  
+  // Update user methods
+  async updateUser(id: number, data: Partial<User>): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error("User not found");
+    }
+    
+    return updatedUser;
+  }
+  
+  async updateUserLastLogin(id: number): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        lastLoginAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error("User not found");
+    }
+    
+    return updatedUser;
+  }
+  
+  async updateUserLastLogout(id: number): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        lastLogoutAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error("User not found");
+    }
+    
+    return updatedUser;
   }
 
   // Wallet methods
