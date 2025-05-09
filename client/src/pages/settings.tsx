@@ -15,11 +15,16 @@ import {
   Moon, 
   Eye, 
   EyeOff,
-  Save
+  Save,
+  LogOut
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
+  const { user, logout } = useAuth();
+  const { toast } = useToast();
   const [showApiKey, setShowApiKey] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState({
@@ -29,6 +34,35 @@ export default function Settings() {
     marketingEmails: false,
     newsUpdates: true
   });
+  
+  // Get user's initials for avatar
+  const getInitials = () => {
+    if (!user) return "?";
+    
+    if (user.displayName) {
+      return user.displayName.split(" ")
+        .map(name => name[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
+    }
+    
+    return user.username.substring(0, 2).toUpperCase();
+  };
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast({
+        title: "Logout Failed",
+        description: "There was an error logging you out. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <>
@@ -48,10 +82,20 @@ export default function Settings() {
             <a href="/transfer" className="text-gray-400 hover:text-white">Transfer</a>
             <a href="/settings" className="text-white font-medium">Settings</a>
           </nav>
-          <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
-              <span className="font-medium text-sm">J</span>
+          <div className="flex items-center space-x-4">
+            <div className="h-8 w-8 rounded-full bg-[#5355D8] flex items-center justify-center">
+              <span className="font-medium text-sm">{getInitials()}</span>
             </div>
+            {user && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleLogout}
+                className="text-gray-400 hover:text-white flex items-center gap-1"
+              >
+                <LogOut className="h-4 w-4" /> Logout
+              </Button>
+            )}
           </div>
         </header>
         
@@ -86,7 +130,7 @@ export default function Settings() {
                     
                     <div className="flex items-center space-x-4 mb-6">
                       <div className="h-20 w-20 rounded-full bg-[#2D2A66] flex items-center justify-center text-2xl">
-                        J
+                        {getInitials()}
                       </div>
                       <Button className="bg-[#6366F1] hover:bg-[#5355D8] text-white">
                         Change Avatar
@@ -96,22 +140,45 @@ export default function Settings() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="displayName">Display Name</Label>
-                        <Input id="displayName" defaultValue="John Doe" className="bg-[#0F0F1A] border-[#2D2A66]" />
+                        <Input 
+                          id="displayName" 
+                          defaultValue={user?.displayName || ''} 
+                          placeholder="Enter your display name"
+                          className="bg-[#0F0F1A] border-[#2D2A66]" 
+                        />
                       </div>
                       
                       <div className="space-y-2">
                         <Label htmlFor="username">Username</Label>
-                        <Input id="username" defaultValue="johndoe" className="bg-[#0F0F1A] border-[#2D2A66]" />
+                        <Input 
+                          id="username" 
+                          defaultValue={user?.username} 
+                          className="bg-[#0F0F1A] border-[#2D2A66]"
+                          disabled 
+                        />
+                        <p className="text-xs text-gray-400">Username cannot be changed</p>
                       </div>
                       
                       <div className="space-y-2">
                         <Label htmlFor="email">Email Address</Label>
-                        <Input id="email" type="email" defaultValue="john.doe@example.com" className="bg-[#0F0F1A] border-[#2D2A66]" />
+                        <Input 
+                          id="email" 
+                          type="email" 
+                          defaultValue={user?.email || ''} 
+                          placeholder="Enter your email address"
+                          className="bg-[#0F0F1A] border-[#2D2A66]" 
+                        />
                       </div>
                       
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
-                        <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" className="bg-[#0F0F1A] border-[#2D2A66]" />
+                        <Input 
+                          id="phone" 
+                          type="tel" 
+                          defaultValue={user?.phoneNumber || ''} 
+                          placeholder="Enter your phone number"
+                          className="bg-[#0F0F1A] border-[#2D2A66]" 
+                        />
                       </div>
                     </div>
                     
