@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BrowserProvider, JsonRpcSigner, ethers } from 'ethers';
-import { useToast } from '@/hooks/use-toast';
 
 // Define ethereum interface for window
 declare global {
@@ -28,7 +27,7 @@ export interface WalletState {
 }
 
 export function useEthWallet() {
-  const { toast } = useToast();
+  // Initialize without toast to avoid circular dependencies
   const [walletState, setWalletState] = useState<WalletState>({
     account: null,
     chainId: null,
@@ -133,11 +132,7 @@ export function useEthWallet() {
   const connectWallet = useCallback(async (type: WalletType) => {
     const ethereum = getEthereum();
     if (!ethereum) {
-      toast({
-        title: 'No Wallet Found',
-        description: 'Please install MetaMask or another Ethereum wallet.',
-        variant: 'destructive',
-      });
+      console.error('No wallet found');
       return;
     }
     
@@ -150,10 +145,7 @@ export function useEthWallet() {
       // Update account info
       await updateAccountInfo();
       
-      toast({
-        title: 'Wallet Connected',
-        description: `Successfully connected to ${type}`,
-      });
+      console.log(`Successfully connected to ${type}`);
     } catch (error: any) {
       console.error('Failed to connect wallet:', error);
       setWalletState(prev => ({ 
@@ -161,16 +153,10 @@ export function useEthWallet() {
         connected: false,
         connecting: false
       }));
-      
-      toast({
-        title: 'Connection Failed',
-        description: error.message || 'Could not connect to wallet. Please try again.',
-        variant: 'destructive',
-      });
     } finally {
       setWalletState(prev => ({ ...prev, connecting: false }));
     }
-  }, [getEthereum, toast, updateAccountInfo]);
+  }, [getEthereum, updateAccountInfo]);
   
   // Disconnect wallet
   const disconnectWallet = useCallback(() => {
@@ -187,11 +173,8 @@ export function useEthWallet() {
       ensName: null
     });
     
-    toast({
-      title: 'Wallet Disconnected',
-      description: 'Your wallet has been disconnected.',
-    });
-  }, [toast]);
+    console.log('Wallet disconnected');
+  }, []);
 
   // Auto connect if previously connected
   useEffect(() => {

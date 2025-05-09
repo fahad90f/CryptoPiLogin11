@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Rocket, Shield } from "lucide-react";
+import { Rocket, Shield, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Helmet } from "react-helmet";
+import { Separator } from "@/components/ui/separator";
+import { FcGoogle } from "react-icons/fc";
 
 export default function Register() {
   const [username, setUsername] = useState("");
@@ -16,8 +18,10 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [displayName, setDisplayName] = useState("");
   
-  const { register } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   
@@ -33,7 +37,7 @@ export default function Register() {
     setIsLoading(true);
     
     try {
-      await register(username, password);
+      await register(username, password, displayName);
       toast({
         title: "Registration successful",
         description: "Welcome to CryptoPilot! Your account has been created."
@@ -43,6 +47,24 @@ export default function Register() {
       setError(err.message || "Failed to register. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    setError("");
+    setIsGoogleLoading(true);
+    
+    try {
+      await loginWithGoogle();
+      toast({
+        title: "Sign up successful",
+        description: "Welcome to CryptoPilot! Your Google account is now linked."
+      });
+      navigate("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Failed to sign up with Google. Please try again.");
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -76,16 +98,78 @@ export default function Register() {
                 </Alert>
               )}
               
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full mb-4 flex items-center justify-center space-x-2"
+                onClick={handleGoogleSignup}
+                disabled={isGoogleLoading}
+              >
+                {isGoogleLoading ? (
+                  <>
+                    <svg 
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-foreground" 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      fill="none" 
+                      viewBox="0 0 24 24"
+                    >
+                      <circle 
+                        className="opacity-25" 
+                        cx="12" 
+                        cy="12" 
+                        r="10" 
+                        stroke="currentColor" 
+                        strokeWidth="4"
+                      ></circle>
+                      <path 
+                        className="opacity-75" 
+                        fill="currentColor" 
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <FcGoogle className="h-5 w-5" />
+                    <span>Continue with Google</span>
+                  </>
+                )}
+              </Button>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-card px-2 text-xs text-muted-foreground">
+                    Or use email
+                  </span>
+                </div>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="Choose a username"
+                    id="email"
+                    type="email"
+                    placeholder="Your email address"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
+                    className="bg-muted/40 border border-muted/60"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input
+                    id="displayName"
+                    type="text"
+                    placeholder="How others will see you"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
                     className="bg-muted/40 border border-muted/60"
                   />
                 </div>

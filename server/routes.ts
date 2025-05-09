@@ -133,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post("/api/auth/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         return next(err);
       }
@@ -142,9 +142,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
       
-      req.login(user, (err) => {
-        if (err) {
-          return next(err);
+      req.login(user, (loginErr: any) => {
+        if (loginErr) {
+          return next(loginErr);
         }
         
         // Return user data without password

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Rocket } from "lucide-react";
+import { Rocket, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,14 +9,17 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Helmet } from "react-helmet";
+import { Separator } from "@/components/ui/separator";
+import { FcGoogle } from "react-icons/fc";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   
@@ -36,6 +39,21 @@ export default function Login() {
       setError(err.message || "Failed to login. Please check your credentials.");
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleGoogleLogin = async () => {
+    if (isGoogleLoading) return;
+    setError("");
+    setIsGoogleLoading(true);
+    
+    try {
+      await loginWithGoogle();
+      navigate("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in with Google. Please try again.");
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -106,7 +124,7 @@ export default function Login() {
                 <Button 
                   type="submit" 
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                 >
                   {isLoading ? (
                     <>
@@ -133,7 +151,60 @@ export default function Login() {
                       Logging in...
                     </>
                   ) : (
-                    "Login"
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Login with Email
+                    </>
+                  )}
+                </Button>
+                
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-muted/60" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+                
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="w-full bg-white dark:bg-muted/10 border border-muted/60"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading || isGoogleLoading}
+                >
+                  {isGoogleLoading ? (
+                    <>
+                      <svg 
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-black dark:text-white" 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        fill="none" 
+                        viewBox="0 0 24 24"
+                      >
+                        <circle 
+                          className="opacity-25" 
+                          cx="12" 
+                          cy="12" 
+                          r="10" 
+                          stroke="currentColor" 
+                          strokeWidth="4"
+                        ></circle>
+                        <path 
+                          className="opacity-75" 
+                          fill="currentColor" 
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <FcGoogle className="mr-2 h-4 w-4" />
+                      <span className="text-black dark:text-white">Continue with Google</span>
+                    </>
                   )}
                 </Button>
               </form>
