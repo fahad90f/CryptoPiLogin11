@@ -103,7 +103,7 @@ export function ApiKeyManagement() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['/api/admin/api-keys'],
     queryFn: async () => {
-      const response = await apiRequest('/api/admin/api-keys');
+      const response = await apiRequest('GET', '/api/admin/api-keys');
       return response;
     }
   });
