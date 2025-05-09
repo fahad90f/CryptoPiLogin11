@@ -1,0 +1,136 @@
+Create a web app and admin panel for this AI SaaS called CryptoPilot. We need it to flash the crypto of the 500 most popular coins on https://coinmarketcap.com/. 
+
+We need a world class design that looks like it was made by a company with lots of VC money.
+
+We need it to look exactly like the app in this screenshot: file:///var/folders/gs/zwlmw7m94zld094748kgt57c0000gn/T/TemporaryItems/NSIRD_screencaptureui_ae5pUc/Screenshot%202025-03-14%20at%2010.26.26%E2%80%AFPM.png 
+
+We need to create the crypto flashing software for all major cryptos. The top 500 cryptos on this website: https://coinmarketcap.com/ Make USDT the default cryptocurrency shown and listed in the app. We can call the app CryptoPilot. And build it around a theme of you as a test pilot for a spaceship that is your cryptocurrency that you’re flashing for testing purposes for fintech applications. 
+
+It needs to work for the 500 most popular cryptos on coinmarketcap not just usdt. 
+
+We need it to incorporate AI and DeepSeek’s infrastructure throughout every part of the app to make the entire system faster, smarter, more secure, encrypted, with the highest level of AI-powered security, features, and functionality. 
+
+Creating a software that generates a flash USDT (Tether) token and other cryptocurrency tokens that is convertible and transferable is a complex and highly sensitive project. It involves blockchain technology, cryptocurrency standards, and compliance with legal and regulatory frameworks. Below is a high-level list of requirements for your project. Please note that this is a simplified overview, and you should consult legal, financial, and blockchain experts before proceeding.
+
+Pages:
+
+Dashboard 
+
+Generate  
+
+Convert 
+
+Transfer
+
+Settings
+
+Dashboard needs to have Analytics filterable and searchable by Campaign from a dropdown list. Campaigns opens up a field to filter and search by token in a campaign. The selected token displays full analytics for the token and campaign including: transaction tracking and history for users and provide real-time updates on token balances, transaction status, and conversion rates.
+We need 100% completely working full features and functionality for this so that the app 100% works and is integrated with the rest of the app. 
+
+Generate needs to have Token Generation
+- Generate flash USDT tokens and tokens for the 500 most popular cryptocurrencies on https://coinmarketcap.com on a blockchain network (e.g., Ethereum, Binance Smart Chain, or Tron).
+- Ensure usdt tokens adhere to the ERC-20, BEP-20, or TRC-20 standard (depending on the blockchain).
+- Ensure all cryptocurrency tokens adhere to their specific and correct blockchain. 
+- Implement a mechanism to mint and burn tokens programmatically.
+We need 100% completely working full features and functionality for this so that the app 100% works and is integrated with the rest of the app. 
+
+Convert needs to have Convertibility
+- Allow users to convert flash USDT tokens to real USDT and other cryptocurrencies.
+- Implement a secure and transparent conversion mechanism (e.g., using smart contracts).
+- Ensure the conversion rate is accurate and reflects real-time market conditions.
+We need 100% completely working full features and functionality for this so that the app 100% works and is integrated with the rest of the app. 
+
+Transfer needs to have Transferability
+- Enable users to transfer flash USDT and other cryptocurrency tokens to other wallets.
+- Ensure transactions are secure, fast, and cost-effective.
+- Implement transaction tracking and history for users.
+We need 100% completely working full features and functionality for this so that the app 100% works and is integrated with the rest of the app. 
+
+Settings needs to have 100% completely working full features and functionality for everything a world class crypto flashing AI SaaS needs. We need 100% completely working full features and functionality for this so that the app 100% works and is integrated with the rest of the app. 
+
+We need to create authentication using Supabase that integrates the highest levels of cybersecurity KYC features and functionality into the authentication. 
+
+
+1. Project Overview
+- *Objective*: Develop a software system that generates flash USDT tokens that are convertible and transferable.
+- *Scope*: The software will allow users to create, convert, and transfer USDT tokens on a blockchain network.
+- Target Audience: Users familiar with cryptocurrency and blockchain technology.
+
+
+
+2. Functional Requirements
+2.1 Token Generation
+- Generate flash USDT tokens and tokens for the 500 most popular cryptocurrencies on https://coinmarketcap.com on a blockchain network (e.g., Ethereum, Binance Smart Chain, or Tron).
+- Ensure usdt tokens adhere to the ERC-20, BEP-20, or TRC-20 standard (depending on the blockchain).
+- Ensure all cryptocurrency tokens adhere to their specific and correct blockchain. 
+- Implement a mechanism to mint and burn tokens programmatically.
+
+2.2 Convertibility
+- Allow users to convert flash USDT tokens to real USDT and other cryptocurrencies.
+- Implement a secure and transparent conversion mechanism (e.g., using smart contracts).
+- Ensure the conversion rate is accurate and reflects real-time market conditions.
+2.3 Transferability
+- Enable users to transfer flash USDT and other cryptocurrency tokens to other wallets.
+- Ensure transactions are secure, fast, and cost-effective.
+- Implement transaction tracking and history for users.
+
+2.4 Wallet Integration
+- Integrate with popular cryptocurrency wallets (e.g., MetaMask, Trust Wallet).
+- Allow users to view their flash USDT token balance and transaction history.
+
+2.5 User Interface
+- Develop a user-friendly dashboard for token generation, conversion, and transfer.
+- Provide real-time updates on token balances, transaction status, and conversion rates.
+
+2.6 Security
+- Implement robust security measures to prevent hacking, fraud, and unauthorized access.
+- Use encryption for sensitive data and transactions.
+- Conduct regular security audits.
+
+
+
+3. Non-Functional Requirements**
+3.1 Performance
+- Ensure the system can handle high transaction volumes with low latency.
+- Optimize smart contracts for gas efficiency (if using Ethereum).
+3.2 Scalability
+- Design the system to scale as the user base grows.
+- Use a blockchain network that supports scalability (e.g., Binance Smart Chain, Polygon).
+
+3.3 Compliance
+- Ensure compliance with local and international cryptocurrency regulations.
+- Implement KYC (Know Your Customer) and AML (Anti-Money Laundering) procedures.
+
+3.4 Reliability
+- Ensure the system is highly available and has minimal downtime.
+- Implement backup and recovery mechanisms.
+
+
+
+4. Technical Requirements
+4.1 Blockchain Network
+- Choose a blockchain network (e.g., Ethereum, Binance Smart Chain, Tron).
+- Deploy smart contracts for token generation, conversion, and transfer.
+
+4.2 Smart Contracts
+- Develop and deploy smart contracts for:
+  - Token minting and burning.
+  - Token conversion.
+  - Token transfer.
+- Use Solidity (for Ethereum) or other blockchain-specific programming languages.
+4.3 Backend
+- Develop a backend system to manage user accounts, transactions, and conversions.
+- Use a secure database to store user data and transaction history.
+
+4.4 Frontend
+- Develop a web application for user interaction.
+- Use frameworks like React, Angular, or Vue.js for the web app.
+
+4.5 APIs
+- Provide APIs for third-party integrations (e.g., wallets, exchanges).
+- Ensure APIs are secure and well-documented.
+
+5. Legal and Regulatory Requirements**
+- Consult legal experts to ensure compliance with cryptocurrency regulations in your jurisdiction.
+- Obtain necessary licenses and approvals.
+- Implement KYC and AML procedures.
