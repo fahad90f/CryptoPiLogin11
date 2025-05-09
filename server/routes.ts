@@ -327,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Get all users from database
-        const { users, total } = await storage.getAllUsers(page, limit, search);
+        const { users, total } = await adminStorage.getAllUsers(page, limit, search);
         
         // Map to remove passwords
         const safeUsers = users.map(user => {
@@ -475,7 +475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const status = req.query.status as string || undefined;
       
       try {
-        const logs = await storage.getAuthLogs(page, limit, search, action, status);
+        const logs = await adminStorage.getAuthLogs(page, limit, undefined, action, status);
         res.json(logs);
       } catch (dbError) {
         console.error("Database error fetching auth logs:", dbError);
@@ -650,7 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // System settings endpoints
   app.get("/api/admin/system/config", requireAdmin, async (req, res) => {
     try {
-      const config = await storage.getSystemConfig();
+      const config = await adminStorage.getSystemConfig();
       
       if (!config || config.length === 0) {
         // Return default settings if none exist
