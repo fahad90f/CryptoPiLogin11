@@ -421,7 +421,7 @@ export function UserManagement() {
     }
     
     if (isActive) {
-      return <Badge variant="success">Active</Badge>;
+      return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
     }
     
     return <Badge variant="secondary">Inactive</Badge>;

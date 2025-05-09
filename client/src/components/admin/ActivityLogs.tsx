@@ -115,12 +115,12 @@ export function ActivityLogs() {
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case 'success':
-        return <Badge variant="success">Success</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600">Success</Badge>;
       case 'failure':
       case 'failed':
         return <Badge variant="destructive">Failed</Badge>;
       case 'warning':
-        return <Badge variant="warning">Warning</Badge>;
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Warning</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -147,7 +147,7 @@ export function ActivityLogs() {
     // Combine header and rows
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.join(','))
+      ...rows.map((row: (string | number)[]) => row.join(','))
     ].join('\n');
     
     // Create Blob and download link

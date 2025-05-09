@@ -160,7 +160,7 @@ export function TransferTokens() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Alert variant="outline" className="mb-4">
+        <Alert className="mb-4 border">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Be careful!</AlertTitle>
           <AlertDescription>
