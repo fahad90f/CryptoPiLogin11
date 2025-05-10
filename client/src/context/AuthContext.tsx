@@ -215,6 +215,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogle = async () => {
     try {
       setIsLoading(true);
+      
+      // Check if we're using demo Firebase credentials
+      if (import.meta.env.VITE_FIREBASE_API_KEY === undefined) {
+        toast({
+          title: "Firebase Not Configured",
+          description: "Please use email/password login instead. Firebase credentials are not configured.",
+          variant: "destructive",
+        });
+        throw new Error("Firebase credentials not configured");
+      }
+      
       const firebaseUser = await signInWithGoogle();
       if (firebaseUser) {
         await syncFirebaseUserWithBackend(firebaseUser);
