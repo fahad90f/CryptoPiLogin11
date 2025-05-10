@@ -54,21 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchCurrentUser();
   }, []);
   
-  // Listen for Firebase auth state changes
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser && !isAuthenticated) {
-        try {
-          // If we have a Firebase user but no server user, sync them
-          await syncFirebaseUserWithBackend(firebaseUser);
-        } catch (error) {
-          console.error("Error syncing Firebase user:", error);
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [isAuthenticated]);
+  // Removed Firebase auth state listener since we're not using Firebase authentication
+  
 
   // Sync Firebase user with our backend
   async function syncFirebaseUserWithBackend(firebaseUser: FirebaseUser) {
@@ -139,37 +126,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     try {
-      // If username is an email, try to register with Firebase first
-      if (username.includes('@')) {
-        try {
-          const firebaseUser = await registerWithEmailPassword(
-            username, 
-            password, 
-            displayName || username.split('@')[0]
-          );
-          if (firebaseUser) {
-            await syncFirebaseUserWithBackend(firebaseUser);
-            
-            toast({
-              title: "Account Created",
-              description: "Please check your email to verify your account.",
-            });
-            return;
-          }
-        } catch (firebaseError: any) {
-          console.error("Firebase registration failed, falling back to local:", firebaseError);
-          // If it's a Firebase specific error like "email already in use", don't try local
-          if (firebaseError.code === "auth/email-already-in-use") {
-            throw firebaseError;
-          }
-        }
-      }
-      
-      // Fall back to local registration
+      // Use direct registration with our backend
       const res = await apiRequest("POST", "/api/auth/register", { 
         username, 
         password,
-        displayName: displayName || username 
+        displayName: displayName || username,
+        email: username.includes('@') ? username : null 
       });
       const userData = await res.json();
       setUser(userData);
@@ -195,29 +157,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       
-      // Check if we're using demo Firebase credentials
-      if (import.meta.env.VITE_FIREBASE_API_KEY === undefined) {
-        toast({
-          title: "Firebase Not Configured",
-          description: "Please use email/password login instead. Firebase credentials are not configured.",
-          variant: "destructive",
-        });
-        throw new Error("Firebase credentials not configured");
-      }
-      
-      const firebaseUser = await signInWithGoogle();
-      if (firebaseUser) {
-        await syncFirebaseUserWithBackend(firebaseUser);
-        toast({
-          title: "Welcome!",
-          description: "You have successfully signed in with Google.",
-        });
-      }
-    } catch (error: any) {
-      console.error("Google login failed:", error);
+      // Instead of using Firebase Google Auth, notify user to use username/password
       toast({
-        title: "Google Sign-in Failed",
-        description: error.message || "Failed to sign in with Google.",
+        title: "Google Login Not Available",
+        description: "Please use username/password login instead. Firebase Admin credentials are not configured.",
+        variant: "destructive",
+      });
+      throw new Error("Firebase Admin credentials not configured");
+      
+    } catch (error: any) {
+      console.error("Google login not available:", error);
+      toast({
+        title: "Google Sign-in Not Available",
+        description: "Please use username/password login. Firebase Admin credentials need to be configured.",
         variant: "destructive",
       });
       throw error;
@@ -229,16 +181,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendPasswordReset = async (email: string) => {
     try {
       setIsLoading(true);
-      await resetPassword(email);
+      
+      // Show a message that password reset is not available without Firebase Admin
       toast({
-        title: "Password Reset Email Sent",
-        description: "Check your email for instructions to reset your password.",
+        title: "Password Reset Not Available",
+        description: "Please contact the administrator to reset your password.",
+        variant: "destructive",
       });
+      throw new Error("Password reset not available without Firebase Admin credentials");
     } catch (error: any) {
-      console.error("Password reset failed:", error);
+      console.error("Password reset not available:", error);
       toast({
-        title: "Password Reset Failed",
-        description: error.message || "Failed to send password reset email.",
+        title: "Password Reset Not Available",
+        description: "Please contact the administrator to reset your password.",
         variant: "destructive",
       });
       throw error;
@@ -251,14 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     try {
-      // Logout from Firebase if user is logged in
-      try {
-        await logoutUser();
-      } catch (firebaseError) {
-        console.error("Firebase logout error:", firebaseError);
-      }
-      
-      // Always logout from server session
+      // Logout from server session
       await apiRequest("POST", "/api/auth/logout", {});
       setUser(null);
       
