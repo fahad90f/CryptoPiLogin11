@@ -113,28 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     try {
-      // First try to login via Firebase if it's an email
-      if (username.includes('@')) {
-        try {
-          const firebaseUser = await loginWithEmailPassword(username, password);
-          if (firebaseUser) {
-            await syncFirebaseUserWithBackend(firebaseUser);
-            return;
-          }
-        } catch (firebaseError: any) {
-          console.error("Firebase login failed, falling back to local:", firebaseError);
-          
-          // Don't fallback if it's a Firebase specific error like "email not verified"
-          if (firebaseError.code === "auth/user-not-found" ||
-              firebaseError.code === "auth/wrong-password") {
-            // Likely a local user, continue to local login
-          } else {
-            throw firebaseError;
-          }
-        }
-      }
-      
-      // Fall back to local authentication
+      // Use local authentication directly (bypassing Firebase)
       const res = await apiRequest("POST", "/api/auth/login", { username, password });
       const userData = await res.json();
       setUser(userData);
