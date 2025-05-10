@@ -37,14 +37,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(passport.initialize());
   app.use(passport.session());
   
-  // Passport local strategy
+  // Passport local strategy with identifier (username or email)
   passport.use(
     new LocalStrategy(async (username: string, password: string, done: Function) => {
       try {
-        const user = await storage.getUserByUsername(username);
+        // Try to find user by username or email
+        const user = await storage.getUserByIdentifier(username);
         
         if (!user) {
-          return done(null, false, { message: "Incorrect username" });
+          return done(null, false, { message: "Incorrect username or email" });
         }
         
         // In a real app, you would use bcrypt to compare hashed passwords
@@ -54,6 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return done(null, user);
       } catch (error) {
+        console.error("Authentication error:", error);
         return done(error);
       }
     })
